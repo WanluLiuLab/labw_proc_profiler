@@ -1,0 +1,428 @@
+---
+title: "Progress Report"
+date:  "`r Sys.time()`"
+output:
+  html_document:
+params:
+  basename: "33434.log"
+  pid: "33434"
+  RMD_ARGS: "."
+---
+
+TODO: Skip missing files
+
+# `r params$pid` Information
+
+```{r setup, include = FALSE}
+source(paste(params$RMD_ARGS, "rmd_args.R", sep="/"))
+basename <- sprintf("%s.%s", params$basename, params$pid)
+```
+
+Contents in this file shows information about process with PID=`r params$pid`.
+
+## Environ
+
+The following tables shows the environment variable of the process when it is started.
+
+**WARNING**: If the process changed its environment variable, *IT WILL NOT BE SHOWN HERE*!
+
+```{r env}
+env_filename <- paste0(basename, ".env.tsv")
+
+print_kable(env_filename)
+```
+
+## Memory Map
+
+```{r mmap}
+mmap_filename <- paste0(basename, ".mapfile.tsv")
+
+print_kable(mmap_filename)
+```
+
+## CPU
+
+```{r cpu_fn}
+cpu_filename <- paste0(basename, ".cpu.tsv")
+HAVE_CPU <- file.exists(cpu_filename)
+cpu_col_spec <- list(
+    TIME = col_character(),
+    OnCPU = col_number(),
+    CPU_PERCENT = col_double()
+)
+
+if (HAVE_CPU) {
+    cpu_file <- read_tsv(cpu_filename, col_types = cpu_col_spec) %>%
+        dplyr::select(!(OnCPU)) %>%
+        dplyr::mutate(TIME = as.POSIXct(TIME, format = record_time_format))
+    lvls <- cpu_file$TIME
+    HAVE_CPU <- length(lvls) != 0
+    scale_by <- as.integer(length(lvls) / MAX_X_LABS)
+    cpu_file <- cpu_file %>%
+        dplyr::mutate(BREAK_TIME = TIME[as.integer(row_number() / scale_by) * scale_by+1])
+}
+if (!HAVE_CPU) {
+    print_se()
+}
+```
+
+The following graph shows process CPU utilization in percent, which is the task's share of the elapsed CPU time since the last screen update, expressed as a percentage of total CPU time.
+
+**WARNING**: For multi-thread applications, the percentage can go above 100\%.
+
+```{r cpu, eval = HAVE_CPU}
+if (scale_by >= 3) {
+    g <- ggplot(cpu_file, aes(x = BREAK_TIME, y = CPU_PERCENT)) +
+        geom_boxplot(
+            aes(group = BREAK_TIME),
+            outlier.alpha = 0,
+            width = scale_by
+        ) +
+        geom_line(
+            aes(x = TIME, y = CPU_PERCENT),
+            group = 1,
+            color = "blue",
+            linetype = "dotted"
+        ) +
+        stat_summary(fun = mean, geom = "line", aes(group = 1), color = "red") +
+        stat_summary(fun = mean, geom = "point", color = "red")
+} else {
+    g <- ggplot(cpu_file) +
+        geom_line(aes(x = TIME, y = CPU_PERCENT), group = 1, color = "blue")
+}
+cpu_graph_prettify(g)
+```
+
+## Memory
+
+
+```{r mem_fn}
+mem_filename <- paste0(basename, ".mem.tsv")
+HAVE_MEM <- file.exists(mem_filename)
+mem_col_spec <- list(
+    TIME = col_character(),
+    VIRT = col_number(),
+    RESIDENT = col_number(),
+    SHARED = col_number(),
+    TEXT = col_number(),
+    SWAP = col_number()
+)
+if (HAVE_MEM) {
+    mem_file <- read_tsv(mem_filename, col_types = mem_col_spec) %>%
+        dplyr::mutate(TIME = as.POSIXct(TIME, format = record_time_format))
+    mem_gathered_table <- tidyr::gather(mem_file, key = "MEM_NAME", value = "MEM_USED", -TIME)
+    HAVE_MEM <- length(mem_file$TIME) != 0
+}
+if (!HAVE_MEM) {
+    print_se()
+}
+```
+
+* `VIRT`: aka. "VMS", "Virtual Memory Size", The total amount of virtual memory used by the task.  It includes all code, data and shared libraries plus pages that have been swapped out and pages that have been mapped but not used.
+* `RESIDENT`: aka. "RSS", "Residential Memory Set",  A subset of the virtual address space (VIRT) representing the non-swapped physical memory a task is currently using.
+* `TEXT`: aka. "TRS", "Text Resident Set" or "Code". The amount of physical memory currently devoted to executable code.
+* `DATA`: aka. "DRS", "Data Resident Set" The amount of private memory reserved by a process. Such memory may not yet be mapped to physical memory (RES) but will always be included in the virtual memory (VIRT) amount.
+
+**WARNING**: Even though program images and shared libraries are considered private to a process, they will be accounted for as *SHARED* (SHR) by the kernel.
+
+
+```{r mem, eval = HAVE_MEM}
+ggplot(mem_gathered_table) +
+    geom_line(aes(x = TIME, y = MEM_USED, color = MEM_NAME, group = MEM_NAME)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    scale_x_datetime(
+        "Time",
+        breaks = breaks_pretty(n = MAX_X_LABS),
+        labels = label_date(format = record_time_format)
+    ) +
+    scale_y_continuous(
+        "Memory Allocated",
+        breaks =scales::breaks_extended(n=MAX_X_LABS),
+        labels = scales::label_bytes(units="auto_binary", accuracy=0.01),
+        limits = c(0, NA)
+    )+
+        labs(title = "Mean Memory Ultilization plot")
+```
+
+## IO
+
+### Disk IO in bytes
+
+```{r io_fn}
+io_filename <- paste0(basename, ".io.tsv")
+HAVE_IO <- file.exists(io_filename)
+io_col_spec <- list(
+    TIME = col_character(),
+    DiskRead = col_number(),
+    DiskWrite = col_number(),
+    TotalRead = col_number(),
+    TotalWrite = col_number()
+)
+
+if (HAVE_IO) {
+    io_file <- read_tsv(io_filename, col_types = io_col_spec) %>%
+        dplyr::mutate(TIME = as.POSIXct(TIME, format = record_time_format))
+    HAVE_IO <- length(io_file$TIME) != 0
+}
+if (!HAVE_IO) {
+    print_se()
+}
+```
+
+Disk read and write are bytes that is read from or write to the disk, while total ones are summed through monitoring system calls.
+
+```{r io, eval = HAVE_IO}
+io_gathered_table <- tidyr::gather(io_file, key = "IO_NAME", value = "IO_SPEED", -TIME)
+ggplot(io_gathered_table) +
+    geom_line(aes(x = TIME, y = IO_SPEED, color = IO_NAME, group = IO_NAME)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    scale_x_datetime(
+        "Time",
+        breaks = breaks_pretty(n = MAX_X_LABS),
+        labels = label_date(format = record_time_format)
+    ) +
+    scale_y_continuous(
+        "IO Throughput",
+        breaks =scales::breaks_extended(n=MAX_X_LABS),
+        labels = scales::label_bytes(units="auto_binary", accuracy=0.01),
+        limits = c(0, NA)
+    )+
+        labs(title = "Mean IO Ultilization plot")
+```
+
+### Statistics of IO System Calls
+
+
+### File Descriptors
+
+```{r fd_fn}
+fd_filename <- paste0(basename, ".fd.tsv")
+HAVE_FD <- file.exists(fd_filename)
+fd_col_spec <- list(
+    TIME = col_character(),
+    FD = col_number(),
+    Path = col_character()
+)
+
+if (HAVE_FD) {
+    fd_file <- read_tsv(fd_filename, col_types = fd_col_spec) %>%
+        dplyr::mutate(TIME = as.POSIXct(TIME, format = record_time_format))
+    HAVE_FD <- length(fd_file$TIME) != 0
+}
+if (!HAVE_FD) {
+    print_se()
+}
+```
+
+```{r fd_line, eval = HAVE_FD}
+number_of_fd <- fd_file %>%
+    dplyr::group_by(TIME) %>%
+    dplyr::summarise(N=n())
+
+ggplot(number_of_fd) +
+    geom_line(aes(x = TIME, y = N, group = 1)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    scale_x_datetime(
+        "Time",
+        breaks = breaks_pretty(n = MAX_X_LABS),
+        labels = label_date(format = record_time_format)
+    ) +
+        labs(title = "Opened FD plot", y="Number of Opened File Drscriptors")
+```
+
+
+```{r fd_table, eval = HAVE_FD}
+opened_filename <- fd_file %>%
+    dplyr::distinct(Path, .keep_all = TRUE) %>%
+    dplyr::select(!(FD))
+
+kable(opened_filename)
+```
+
+## CHILD
+
+
+```{r child_fn}
+child_filename <- paste0(basename, ".child.tsv")
+HAVE_CHILD <- file.exists(child_filename)
+child_col_spec <- list(
+    TIME=col_character(),
+    CHILD_PROCESS_NUMBER=col_number(),
+    THREAD_NUMBER=col_number()
+)
+
+if (HAVE_CHILD) {
+    child_file <- read_tsv(child_filename, col_types = child_col_spec) %>%
+        dplyr::mutate(TIME = as.POSIXct(TIME, format = record_time_format))
+
+    child_gathered_table <- tidyr::gather(child_file, key = "CHILD_NAME", value = "CHILD_NUM", -TIME)
+
+    HAVE_CHILD <- length(child_file$TIME) != 0
+}
+if (!HAVE_CHILD) {
+    print_se()
+}
+```
+
+Following graph shows number of child process(es) and thread(s) owned by this process.
+
+Child processes of a specific process are processes whose PPID is equal to that process. In Python they can be started by `subprocess`, `os.system` or `multiprocessing`. On GNU/Linux operating systems, it is started by `fork` and `exec` system call.
+
+```{r child, eval = HAVE_CHILD}
+ggplot(child_gathered_table) +
+    geom_line(aes(x = TIME, y = CHILD_NUM)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    scale_x_datetime(
+        "Time",
+        breaks = breaks_pretty(n = MAX_X_LABS),
+        labels = label_date(format = record_time_format)
+    ) +
+    scale_y_continuous(
+        "Number of child processes & threads",
+        breaks =scales::breaks_extended(n=MAX_X_LABS),
+        limits = c(0, NA)
+    )+
+        labs(title = "Child Process & Threads plot")+
+    facet_grid(CHILD_NAME~.)
+```
+
+## STATUS
+
+```{r stat_fn}
+stat_filename <- paste0(basename, ".stat.tsv")
+HAVE_STAT <- file.exists(stat_filename)
+stat_col_spec <- list(
+    TIME=col_character(),
+    CHILD_PROCESS_NUMBER=col_number(),
+    THREAD_NUMBER=col_number()
+)
+if (HAVE_STAT) {
+    stat_file <- read_tsv(stat_filename, col_types = stat_col_spec) %>%
+        dplyr::mutate(TIME = as.POSIXct(TIME, format = record_time_format))
+
+    HAVE_STAT <- length(stat_file$TIME) != 0
+
+    scale_by <- as.integer(length(stat_file$TIME) / MAX_X_LABS)
+    stat_file <- stat_file %>%
+        dplyr::mutate(BREAK_TIME = TIME[as.integer(row_number() / scale_by) * scale_by+1])
+}
+if (!HAVE_STAT) {
+    print_se()
+}
+```
+
+The status of the task which can be one of:
+
+* `D` = uninterruptible sleep. Processes in a "D" or uninterruptible sleep state are usually waiting on I/O.
+* `I` = idle
+* `R` = running
+* `S` = sleeping
+* `T` = stopped by job control signal
+* `t` = stopped by debugger during trace
+* `Z` = zombie
+
+```{r stat_line, eval = HAVE_STAT}
+ggplot(stat_file) +
+    geom_line(aes(x = TIME, y = STAT, group = 1)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    scale_x_datetime(
+        "Time",
+        breaks = breaks_pretty(n = MAX_X_LABS),
+        labels = label_date(format = record_time_format)
+    ) +
+        labs(title = "Status plot", y="Status")
+```
+
+
+Following is a pie-chart of total time.
+
+```{r stat_pie, eval = HAVE_STAT}
+summary <- stat_file %>%
+    dplyr::group_by(STAT) %>%
+    dplyr::summarise(N=n())
+
+ggpie(summary, x="N", label="STAT", title = "Overall Status plot")
+```
+
+Following is a bar-plot showing trends of 40 time groups as is indicated in `System.md`.
+
+```{r stat_bar, eval = HAVE_STAT}
+time_summary <- stat_file %>%
+    dplyr::group_by(STAT,BREAK_TIME) %>%
+    dplyr::summarise(N=n())
+
+# FIXME: Error here!
+ggplot(time_summary, aes(x = BREAK_TIME, y = N, fill = STAT)) +
+    geom_bar(stat = "identity") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    scale_x_datetime(
+        "Time",
+        breaks = breaks_pretty(n = MAX_X_LABS),
+        labels = label_date(format = record_time_format)
+    ) +
+        labs(title = "Status Distribution plot", y="Status")
+```
+
+## STRACE
+```{r strace_fn}
+strace_filename <- paste0(basename, ".strace.tsv")
+HAVE_STRACE <- file.exists(strace_filename)
+
+if (HAVE_STRACE) {
+    strace_file <- read.delim(strace_filename)
+    lvls <- strace_file$TIME
+
+    if (length(lvls) == 0) {
+        HAVE_STRACE <- FALSE
+    } else if (length(lvls) <= MAX_X_LABS) {
+        scale_by <- 1
+        breaks <- lvls
+    } else {
+        scale_by <- as.integer(length(lvls) / MAX_X_LABS) + 1
+        breaks <- lvls[seq(1, length(lvls), by = scale_by)]
+    }
+}
+if (!HAVE_STRACE) {
+    print_se()
+}
+```
+
+Following is a pie-chart of done syscalls.
+
+```{r syscall_pie, eval = HAVE_STRACE}
+summary <- data.frame(table(strace_file$CALL))
+ggplot(summary, aes(x = "", y = Freq, fill = Var1)) +
+    geom_col() +
+    coord_polar(theta = "y")
+```
+
+
+Following is a bar-plot showing trends of 40 time groups as is indicated in `System.md`.
+
+```{r strace_bar, eval = HAVE_STRACE}
+breaks_vector <- as.vector(breaks)
+boxplot_lvls <- c()
+record_count <- dim(strace_file)[1]
+
+for (i in c(1:record_count)) {
+    boxplot_lvls <- c(boxplot_lvls, breaks_vector[as.integer(i / scale_by) + 1])
+}
+strace_file$BREAK_TIME <- factor(boxplot_lvls)
+time_summary <- data.frame(table(strace_file[, c("CALL", "BREAK_TIME")]))
+
+ggplot(time_summary, aes(x = BREAK_TIME, y = Freq, fill = CALL)) +
+    geom_bar(stat = "identity") +
+    theme(axis.text.x = element_text(angle = 90))
+```
+
+## Help
+
+* Man page of Unix command `top`: <https://www.man7.org/linux/man-pages/man1/top.1.html>
+* Documentation of Python package `psutil`: <https://psutil.readthedocs.io/en/latest/>
+* Man page of Process FileSystem: <https://man7.org/linux/man-pages/man5/proc.5.html>

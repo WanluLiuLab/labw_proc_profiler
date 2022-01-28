@@ -1,0 +1,7 @@
+sphinx
+rst2pdf
+myst-parser
+psutil
+prettytable
+sphinx-book-theme
+tqdm

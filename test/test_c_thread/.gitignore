@@ -1,0 +1,14 @@
+cmake-build-debug*
+*.o
+*.lo
+.libs/
+.lib/
+build/
+*.a
+*.la
+*.so
+*.co
+*.exe
+scan-build/
+analyse-cppcheck-build-dir/
+/.idea/sonarlint/

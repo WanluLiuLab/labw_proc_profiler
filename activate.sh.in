@@ -1,0 +1,20 @@
+# shell=bash
+#===============================================================================
+# Copyright (C) 2021-2022. gpmf authors
+#
+# This file is a part of gpmf, which is licensed under MIT,
+# a copy of which can be obtained at <https://opensource.org/licenses/MIT>.
+#
+# NAME: activate.sh.in -- Activate environment for this program
+#
+# VERSION HISTORY:
+# 2021-10-26 0.1  : Purposed and added by YU Zhejian.
+#
+#===============================================================================
+
+__PROC_PROFILER_ENV_ABSPATH=__REPLACE_PROC_PROFILER_ENV_ABSPATH__
+
+export PYTHONPATH="${__PROC_PROFILER_ENV_ABSPATH}/src:${PYTHONPATH:-}"
+export PATH="${__PROC_PROFILER_ENV_ABSPATH}/bin:${PATH:-}"
+. "${__PROC_PROFILER_ENV_ABSPATH}"/.virtualenv/bin/activate
+unset __PROC_PROFILER_ENV_ABSPATH

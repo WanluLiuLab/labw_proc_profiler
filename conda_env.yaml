@@ -1,0 +1,15 @@
+name: proc_profiler
+channels:
+  - conda
+  - conda-forge
+  - r
+dependencies:
+  - psutil
+  - prettytable
+  - tqdm
+  - R
+  - r-argparser
+  - r-ggpubr
+  - r-knitr
+  - r-rmarkdown
+  - r-tidyverse

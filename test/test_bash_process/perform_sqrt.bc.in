@@ -1,0 +1,5 @@
+#!/usr/bin/env bc
+scale=64
+for (j=0;i<__NUM_OF_ROUNDS__;i++) {
+    for (i=0;i<__NUM_TO_SQRT__;i++) sqrt(i)
+}

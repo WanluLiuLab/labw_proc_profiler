@@ -1,0 +1,231 @@
+---
+title: "Progress Report"
+date:  "`r Sys.time()`"
+output:
+  html_document:
+params:
+  basename: "33434.log"
+  RMD_ARGS: "."
+---
+
+# System Information
+
+```{r setup, include = FALSE}
+source(paste(params$RMD_ARGS, "rmd_args.R", sep="/"))
+```
+
+
+## Monitored Processes
+
+The following table shows all processes monitored. You may visit other generated reports for information about these processes.
+
+* `TIME`: The time when the process is detected.
+* `PID`: Process ID.
+* `CMD`: The command line used to start a task.
+* `EXE`: Absolute path of the executable.
+* `CWD`: The working directory when the process is started. **WARNING**: If a process changes its working directory, it will not be detected!
+
+```{r processes}
+reg_filename <- paste0(params$basename, ".reg.tsv")
+
+print_kable(reg_filename)
+```
+
+## File System
+
+* `DEVICE`: Corresponding device representation, usually in `/dev`.
+* `MOUNT_POINT`: Where this device is mounted.
+* `FSTYPE`: Device file system type. e.g. `ntfs`.
+* `OPTS`: Device mount options.
+* `TOTAL`: Device total space.
+* `USED`: How many space is used.
+
+```{r fs}
+mnt_filename <- paste0(params$basename, ".mnt.tsv")
+
+print_kable(mnt_filename)
+```
+
+
+## CPU
+
+```{r cpu_fn}
+cpu_filename <- paste0(params$basename, ".sys.cpu.tsv")
+HAVE_CPU <- file.exists(cpu_filename)
+if (HAVE_CPU) {
+    cpu_file <- read_tsv(cpu_filename, show_col_types = FALSE) %>%
+        dplyr::mutate(TIME = as.POSIXct(TIME, format = record_time_format))
+
+    cpu_gathered_table <- tidyr::gather(cpu_file, key = "CPU_NAME", value = "CPU_PERCENT", -TIME)
+
+    lvls <- cpu_file$TIME
+    HAVE_CPU <- length(lvls) != 0
+}
+if (!HAVE_CPU) {
+    print_se()
+}
+```
+
+The following graph shows the CPU percentage per logical processor.
+
+e.g. For a CPU supporting "4 cores 8 threads", there should be 8 logical processors so 8 lines.
+
+```{r cpu_logical, eval = HAVE_CPU}
+g <- ggplot(cpu_gathered_table) +
+    geom_area(aes(x = TIME, y = CPU_PERCENT, fill = CPU_NAME, group = CPU_NAME))
+cpu_graph_prettify(g)
+```
+
+
+The following graph shows mean CPU utilization among all logical processors. If there are less than 120 events, this graph would be consisted with a single solid blue line, indicating mean CPU utilization. If there are more than 120 events, all events would be grouped into 40 groups and a boxplot will be displayed. Blue dotted line is real mean CPU utilization and the red line is the mean of mean CPU utilization within a group. Using this method, it would be more efficient to see the trend.
+
+```{r cpu_mean, eval = HAVE_CPU}
+cpu_total <- cpu_gathered_table %>%
+    dplyr::group_by(TIME) %>%
+    dplyr::summarise(SUM = sum(CPU_PERCENT))
+scale_by <- as.integer(length(lvls) / MAX_X_LABS)
+cpu_total <- cpu_total %>%
+    dplyr::mutate(BREAK_TIME = TIME[as.integer(row_number() / scale_by) * scale_by + 1])
+if (scale_by >= 3) {
+    g <- ggplot(cpu_total, aes(x = BREAK_TIME, y = SUM)) +
+        geom_boxplot(
+            aes(group = BREAK_TIME),
+            outlier.alpha = 0,
+            width = scale_by
+        ) +
+        geom_line(
+            aes(x = TIME, y = SUM),
+            group = 1,
+            color = "blue",
+            linetype = "dotted"
+        ) +
+        stat_summary(fun = mean, geom = "line", aes(group = 1), color = "red") +
+        stat_summary(fun = mean, geom = "point", color = "red")
+} else {
+    g <- ggplot(cpu_total) +
+        geom_line(aes(x = TIME, y = SUM), group = 1, color = "blue")
+}
+cpu_graph_prettify(g)
+```
+
+## Memory
+
+```{r mem_fn}
+mem_filename <- paste0(params$basename, ".sys.mem.tsv")
+HAVE_MEM <- file.exists(mem_filename)
+mem_col_spec <- list(
+    TIME = col_character(),
+    TOTAL = col_number(),
+    USED = col_number(),
+    BUFFERED = col_number(),
+    CACHED = col_number(),
+    SHARED = col_number()
+)
+if (HAVE_MEM) {
+    mem_file <- read_tsv(mem_filename, col_types = mem_col_spec) %>%
+        dplyr::mutate(TIME = as.POSIXct(TIME, format = record_time_format))
+    mem_gathered_table <- tidyr::gather(mem_file, key = "MEM_NAME", value = "MEM_USED", -TIME)
+    HAVE_MEM <- length(mem_file$TIME) != 0
+}
+if (!HAVE_MEM) {
+    print_se()
+}
+```
+
+The following graph shows system memory information.
+
+* `TOTAL`: Total available *PHYSICAL* memory, excluding SWAP.
+* `USED`: None-Zero memory.
+* `CLAIMED`: `TOTAL` - `AVAIL`. `AVAIL` is an estimation of physical memory available for starting new applications, without swapping.
+* `BUFFER`: Cache for things like file system metadata.
+* `CACHED`: Cache for various things.
+* `SHARED`: A subset of resident memory (RES) that may be used by other processes. It will include shared anonymous pages and shared file-backed pages. It also includes private pages mapped to files representing program images and shared libraries.
+
+```{r mem, eval = HAVE_MEM}
+ggplot(mem_gathered_table) +
+    geom_line(aes(x = TIME, y = MEM_USED, color = MEM_NAME, group = MEM_NAME)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    scale_x_datetime(
+        "Time",
+        breaks = breaks_pretty(n = MAX_X_LABS),
+        labels = label_date(format = record_time_format)
+    ) +
+    scale_y_continuous(
+        "Memory Allocated",
+        breaks = scales::breaks_extended(n = MAX_X_LABS),
+        labels = scales::label_bytes(units = "auto_binary", accuracy = 0.01),
+        limits = c(0, NA)
+    ) +
+    labs(title = "Mean Memory Ultilization plot")
+```
+
+## SWAP
+
+```{r swap_fn}
+swap_filename <- paste0(params$basename, ".sys.swap.tsv")
+HAVE_SWAP <- file.exists(swap_filename)
+swap_col_spec <- list(
+    TIME = col_character(),
+    TOTAL = col_number(),
+    USED = col_number()
+)
+if (HAVE_SWAP) {
+    swap_file <- read_tsv(swap_filename, col_types = swap_col_spec) %>%
+        dplyr::mutate(TIME = as.POSIXct(TIME, format = record_time_format))
+    swap_gathered_table <- tidyr::gather(swap_file, key = "SWAP_NAME", value = "SWAP_USED", -TIME)
+    HAVE_SWAP <- length(swap_file$TIME) != 0
+}
+if (!HAVE_SWAP) {
+    print_se()
+}
+```
+
+SWAP is the formerly resident portion of a task's address space written to the swap file when physical memory becomes overcommitted.
+
+* `TOTAL`: Total available SWAP.
+* `USED`: Used SWAP.
+
+
+```{r swap, eval = HAVE_SWAP}
+ggplot(swap_gathered_table) +
+    geom_line(aes(x = TIME, y = SWAP_USED, color = SWAP_NAME, group = SWAP_NAME)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    scale_x_datetime(
+        "Time",
+        breaks = breaks_pretty(n = MAX_X_LABS),
+        labels = label_date(format = record_time_format)
+    ) +
+    scale_y_continuous(
+        "SWAP Allocated",
+        breaks = scales::breaks_extended(n = MAX_X_LABS),
+        labels = scales::label_bytes(units = "auto_binary", accuracy = 0.01),
+        limits = c(0, NA)
+    ) +
+    labs(title = "Mean Memory Ultilization plot")
+```
+
+
+## STDOUT
+
+The standard output. If the process is not initialized by `python -m proc CMD`, this field would be blank.
+
+```{r stdout}
+print_file(paste0(params$basename, ".stdout.log"))
+```
+
+## STDERR
+
+The standard error, similar to STDOUT section.
+
+```{r stderr}
+print_file(paste0(params$basename, ".stderr.log"))
+```
+
+
+## Help
+
+* Manpage of Unix command `top`: <https://www.man7.org/linux/man-pages/man1/top.1.html>
+* Documentation of Python package `psutil`: <https://psutil.readthedocs.io/en/latest/>
+* Manpage of Process FileSystem: <https://man7.org/linux/man-pages/man5/proc.5.html>
