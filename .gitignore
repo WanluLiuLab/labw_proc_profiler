@@ -1,5 +1,6 @@
 !requirements.txt
 /venv/
+.virtualenv/
 /renv/
 /.Rprofile
 /.pytest_cache/
@@ -8,7 +9,6 @@ __pycache__/
 /activate.sh
 /proc_profiler_*/
 /pytest.log
-/.maint/
 tracer.log
 /COPYING
 /LICENSE
