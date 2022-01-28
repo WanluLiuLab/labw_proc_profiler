@@ -14,7 +14,7 @@ TODO: Skip missing files
 # `r params$pid` Information
 
 ```{r setup, include = FALSE}
-source(paste(params$RMD_ARGS, "rmd_args.R", sep="/"))
+source(paste(params$RMD_ARGS, "rmd_args.R", sep = "/"))
 basename <- sprintf("%s.%s", params$basename, params$pid)
 ```
 
@@ -59,7 +59,7 @@ if (HAVE_CPU) {
     HAVE_CPU <- length(lvls) != 0
     scale_by <- as.integer(length(lvls) / MAX_X_LABS)
     cpu_file <- cpu_file %>%
-        dplyr::mutate(BREAK_TIME = TIME[as.integer(row_number() / scale_by) * scale_by+1])
+        dplyr::mutate(BREAK_TIME = TIME[as.integer(row_number() / scale_by) * scale_by + 1])
 }
 if (!HAVE_CPU) {
     print_se()
@@ -138,11 +138,11 @@ ggplot(mem_gathered_table) +
     ) +
     scale_y_continuous(
         "Memory Allocated",
-        breaks =scales::breaks_extended(n=MAX_X_LABS),
-        labels = scales::label_bytes(units="auto_binary", accuracy=0.01),
+        breaks = scales::breaks_extended(n = MAX_X_LABS),
+        labels = scales::label_bytes(units = "auto_binary", accuracy = 0.01),
         limits = c(0, NA)
-    )+
-        labs(title = "Mean Memory Ultilization plot")
+    ) +
+    labs(title = "Mean Memory Ultilization plot")
 ```
 
 ## IO
@@ -154,10 +154,10 @@ io_filename <- paste0(basename, ".io.tsv")
 HAVE_IO <- file.exists(io_filename)
 io_col_spec <- list(
     TIME = col_character(),
-    DiskRead = col_number(),
-    DiskWrite = col_number(),
-    TotalRead = col_number(),
-    TotalWrite = col_number()
+    DiskRead = col_double(),
+    DiskWrite = col_double(),
+    TotalRead = col_double(),
+    TotalWrite = col_double()
 )
 
 if (HAVE_IO) {
@@ -173,9 +173,24 @@ if (!HAVE_IO) {
 Disk read and write are bytes that is read from or write to the disk, while total ones are summed through monitoring system calls.
 
 ```{r io, eval = HAVE_IO}
-io_gathered_table <- tidyr::gather(io_file, key = "IO_NAME", value = "IO_SPEED", -TIME)
+lvls <- io_file$TIME
+scale_by <- as.integer(length(lvls) / MAX_X_LABS)
+
+io_speed <- io_file %>%
+    dplyr::mutate(
+        diff_time = as.numeric(difftime(TIME, lag(TIME), units = "secs")),
+        DiskRead = (DiskRead - lag(DiskRead)) / diff_time,
+        DiskWrite = (DiskWrite - lag(DiskWrite)) / diff_time,
+        TotalRead = (TotalRead - lag(TotalRead)) / diff_time,
+        TotalWrite = (TotalWrite - lag(TotalWrite)) / diff_time,
+        BREAK_TIME = TIME[as.integer(row_number() / scale_by) * scale_by + 1]
+    )
+
+io_gathered_table <- tidyr::gather(io_file, key = "IO_NAME", value = "IO_TOTAL", -TIME)
+io_speed_gathered_table <- tidyr::gather(io_speed, key = "IO_NAME", value = "IO_SPEED", -TIME, -BREAK_TIME, -diff_time)
+
 ggplot(io_gathered_table) +
-    geom_line(aes(x = TIME, y = IO_SPEED, color = IO_NAME, group = IO_NAME)) +
+    geom_line(aes(x = TIME, y = IO_TOTAL, color = IO_NAME, group = IO_NAME)) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 90)) +
     scale_x_datetime(
@@ -185,11 +200,25 @@ ggplot(io_gathered_table) +
     ) +
     scale_y_continuous(
         "IO Throughput",
-        breaks =scales::breaks_extended(n=MAX_X_LABS),
-        labels = scales::label_bytes(units="auto_binary", accuracy=0.01),
+        breaks = scales::breaks_extended(n = MAX_X_LABS),
+        labels = scales::label_bytes(units = "auto_binary", accuracy = 0.01),
         limits = c(0, NA)
-    )+
-        labs(title = "Mean IO Ultilization plot")
+    ) +
+    labs(title = "Total IO Ultilization Plot")
+```
+
+```{r io_speed, eval = HAVE_IO}
+if (scale_by >= 3) {
+    g <- ggplot(io_speed_gathered_table,
+                aes(x = BREAK_TIME, y = IO_SPEED, color = IO_NAME)) +
+        stat_summary(fun = mean, geom = "line") +
+        stat_summary(fun = mean, geom = "point")
+} else {
+    g <- ggplot(io_speed_gathered_table,
+                aes(x = TIME, y = IO_SPEED, color = IO_NAME, group = IO_NAME)) +
+        geom_line()
+}
+io_graph_prettify(g)
 ```
 
 ### Statistics of IO System Calls
@@ -219,7 +248,7 @@ if (!HAVE_FD) {
 ```{r fd_line, eval = HAVE_FD}
 number_of_fd <- fd_file %>%
     dplyr::group_by(TIME) %>%
-    dplyr::summarise(N=n())
+    dplyr::summarise(N = n())
 
 ggplot(number_of_fd) +
     geom_line(aes(x = TIME, y = N, group = 1)) +
@@ -230,7 +259,7 @@ ggplot(number_of_fd) +
         breaks = breaks_pretty(n = MAX_X_LABS),
         labels = label_date(format = record_time_format)
     ) +
-        labs(title = "Opened FD plot", y="Number of Opened File Drscriptors")
+    labs(title = "Opened FD plot", y = "Number of Opened File Drscriptors")
 ```
 
 
@@ -249,9 +278,9 @@ kable(opened_filename)
 child_filename <- paste0(basename, ".child.tsv")
 HAVE_CHILD <- file.exists(child_filename)
 child_col_spec <- list(
-    TIME=col_character(),
-    CHILD_PROCESS_NUMBER=col_number(),
-    THREAD_NUMBER=col_number()
+    TIME = col_character(),
+    CHILD_PROCESS_NUMBER = col_number(),
+    THREAD_NUMBER = col_number()
 )
 
 if (HAVE_CHILD) {
@@ -283,11 +312,11 @@ ggplot(child_gathered_table) +
     ) +
     scale_y_continuous(
         "Number of child processes & threads",
-        breaks =scales::breaks_extended(n=MAX_X_LABS),
+        breaks = scales::breaks_extended(n = MAX_X_LABS),
         limits = c(0, NA)
-    )+
-        labs(title = "Child Process & Threads plot")+
-    facet_grid(CHILD_NAME~.)
+    ) +
+    labs(title = "Child Process & Threads plot") +
+    facet_grid(CHILD_NAME ~ .)
 ```
 
 ## STATUS
@@ -296,9 +325,9 @@ ggplot(child_gathered_table) +
 stat_filename <- paste0(basename, ".stat.tsv")
 HAVE_STAT <- file.exists(stat_filename)
 stat_col_spec <- list(
-    TIME=col_character(),
-    CHILD_PROCESS_NUMBER=col_number(),
-    THREAD_NUMBER=col_number()
+    TIME = col_character(),
+    CHILD_PROCESS_NUMBER = col_number(),
+    THREAD_NUMBER = col_number()
 )
 if (HAVE_STAT) {
     stat_file <- read_tsv(stat_filename, col_types = stat_col_spec) %>%
@@ -308,7 +337,7 @@ if (HAVE_STAT) {
 
     scale_by <- as.integer(length(stat_file$TIME) / MAX_X_LABS)
     stat_file <- stat_file %>%
-        dplyr::mutate(BREAK_TIME = TIME[as.integer(row_number() / scale_by) * scale_by+1])
+        dplyr::mutate(BREAK_TIME = TIME[as.integer(row_number() / scale_by) * scale_by + 1])
 }
 if (!HAVE_STAT) {
     print_se()
@@ -335,7 +364,7 @@ ggplot(stat_file) +
         breaks = breaks_pretty(n = MAX_X_LABS),
         labels = label_date(format = record_time_format)
     ) +
-        labs(title = "Status plot", y="Status")
+    labs(title = "Status plot", y = "Status")
 ```
 
 
@@ -344,17 +373,17 @@ Following is a pie-chart of total time.
 ```{r stat_pie, eval = HAVE_STAT}
 summary <- stat_file %>%
     dplyr::group_by(STAT) %>%
-    dplyr::summarise(N=n())
+    dplyr::summarise(N = n())
 
-ggpie(summary, x="N", label="STAT", title = "Overall Status plot")
+ggpie(summary, x = "N", label = "STAT", title = "Overall Status plot")
 ```
 
 Following is a bar-plot showing trends of 40 time groups as is indicated in `System.md`.
 
 ```{r stat_bar, eval = HAVE_STAT}
 time_summary <- stat_file %>%
-    dplyr::group_by(STAT,BREAK_TIME) %>%
-    dplyr::summarise(N=n())
+    dplyr::group_by(STAT, BREAK_TIME) %>%
+    dplyr::summarise(N = n())
 
 # FIXME: Error here!
 ggplot(time_summary, aes(x = BREAK_TIME, y = N, fill = STAT)) +
@@ -366,7 +395,7 @@ ggplot(time_summary, aes(x = BREAK_TIME, y = N, fill = STAT)) +
         breaks = breaks_pretty(n = MAX_X_LABS),
         labels = label_date(format = record_time_format)
     ) +
-        labs(title = "Status Distribution plot", y="Status")
+    labs(title = "Status Distribution plot", y = "Status")
 ```
 
 ## STRACE

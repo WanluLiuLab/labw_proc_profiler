@@ -47,5 +47,7 @@ if __name__ == '__main__':
         for tracer in list_tracer():
             print(tracer[0], ":", tracer[1])
         sys.exit(0)
-
+    if args.pid is None or args.out is None:
+        print(f"-p and -o required in normal mode. Use {sys.argv[0]} --help for help")
+        sys.exit(1)
     sys.exit(main(args.pid, args.out))

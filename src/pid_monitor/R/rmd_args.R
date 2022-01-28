@@ -27,8 +27,11 @@ knitr::opts_chunk$set(
 #' Maximun number of labels on X axis.
 MAX_X_LABS <- 40
 
+#' Date and time type used in records
+record_time_format <- "%F %H:%M:%OS" # 2022-01-09 14:54:50.16
+
 #' Generate error message for non-exist files.
-print_se <- function(){
+print_se <- function() {
     cat("ERROR: File not exist, too short or invalid.")
 }
 
@@ -58,7 +61,7 @@ print_kable <- function(filepath) {
         return()
     }
     table <- read_tsv(filepath, show_col_types = FALSE)
-    if (dim(table)[1] == 0){
+    if (dim(table)[1] == 0) {
         print_se()
     } else {
         kable(table)
@@ -76,9 +79,6 @@ generate_breaks <- function(lvls) {
     return(breaks)
 }
 
-#' Date and time type used in records
-record_time_format <- "%F %H:%M:%OS" # 2022-01-09 14:54:50.16
-
 #' Function to apply theme setetings to CPU graph
 #' @param g: Graph to be applied
 cpu_graph_prettify <- function(g) {
@@ -95,5 +95,25 @@ cpu_graph_prettify <- function(g) {
             limits = c(0, NA)
         ) +
         labs(title = "Mean CPU Ultilization plot")
+    return(g)
+}
+
+#' Prettify IO graphs, for speed and total
+io_graph_prettify <- function(g, title) {
+    g <- g +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 90)) +
+        scale_x_datetime(
+            "Time",
+            breaks = breaks_pretty(n = MAX_X_LABS),
+            labels = label_date(format = record_time_format)
+        ) +
+        scale_y_continuous(
+            "IO Speed",
+            breaks = scales::breaks_extended(n = MAX_X_LABS),
+            labels = scales::label_bytes(units = "auto_binary", accuracy = 0.01),
+            limits = c(0, NA)
+        ) +
+        labs(title = "IO Speed plot")
     return(g)
 }

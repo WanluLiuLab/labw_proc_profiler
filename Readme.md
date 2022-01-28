@@ -45,28 +45,25 @@ You may add this program to `requirements.txt` of your program to have it profil
 
 ## Documentations
 
+The detailed documentation of this program is deployed at [ReadTheDocs](http://todo.readthedocs.io). % TODO 
+
 ## Quickstart: `proc_profiler`
 
-`proc_profiler` is a Python module which may trace a command like `strace`. The backend of this module is `pid_monitor` introduced below.
+`proc_profiler` is a Python module which may trace a command like `strace`.
 
-### Using `bin/proc_profiler.sh` wrapper
+### Using `bin/proc_profiler.sh` Wrapper
 
-SYNOPSIS: `bin/proc_profiler.sh [command]`
-
-```{note}
-This calls `setup.sh` to check and install the dependencies.
-```
+Usage: `python -m proc_profiler [CMD]`.
 
 e.g. To trace `sleep 5`, one can execute following command:
 
 ```shell
-bin/proc_profiler.sh sleep 5
+python -m proc_profiler sleep 5
 ```
 
 You will get a output like:
 
 ```text
-======================= Starting =======================
 proc_profiler -- Process Monitor Utilities ver. 0.2
 Called by: /home/yuzj/Documents/gpmf/opt/proc_profiler/src/proc_profiler/__main__.py sleep 5
 Output to: proc_profiler_58d2891e-40fb-4c48-90a5-3346371a09e0
@@ -85,10 +82,22 @@ Compiling HTMLs: 100%|======================================================| 2/
 
 With a log file `tracer.log` generated inside your working directory.
 
-### Calling this profiler directly
+The report will be generated at a directory named `proc_profiler_{some_uuid}` with HTML reports inside.
 
-Wish to get rid of that GPMF-style `setup.sh`? Just replace `bin/proc_profiler.sh` with `python -m proc_profiler` and do as above.
-
-If you get a `python: No module named proc_monitor` with exit value 1, please set up the environment correctly.
+```{warning}
+Do not use this application to trace Shell Built-ins like `echo` or `time` in GNU Bash.
+```
 
 ## Quickstart: `pid_monitor`
+
+This Python module is the backend of `proc_profiler` and will attah to a running proces id.
+
+Usage: `python -m pid_monitor -p [PID] -o [OUTDIR]` where `[PID]` is an existing process ID you wish to trace and `[OUTDIR]` is some output directory where you may find your reports.
+
+
+## FAQ
+
+- Q: `python: No module named proc_monitor` with exit value 1.
+- A: Please make sure that you have correctly installed the module. You may chack whether the Python you called is the same as `pip` called.
+- Q: Why do you use R instead of Python to form a report?
+- A: It would be better to have an RMarkdown-like documentation preparation system in Python, which was not found by us.
