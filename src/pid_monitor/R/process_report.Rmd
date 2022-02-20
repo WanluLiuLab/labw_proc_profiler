@@ -9,8 +9,6 @@ params:
   RMD_ARGS: "."
 ---
 
-TODO: Skip missing files
-
 # `r params$pid` Information
 
 ```{r setup, include = FALSE}

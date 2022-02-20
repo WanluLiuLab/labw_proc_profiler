@@ -2,7 +2,7 @@ from time import sleep
 
 import psutil
 
-from pid_monitor import _ALL_PIDS, _PSUTIL_NOTFOUND_ERRORS, _DEFAULT_REFRESH_INTERVAL
+from pid_monitor import _ALL_PIDS, PSUTIL_NOTFOUND_ERRORS, DEFAULT_REFRESH_INTERVAL
 from pid_monitor import get_timestamp, get_total_cpu_time
 from pid_monitor.dt_base import BaseTracerDispatcherThread
 from pid_monitor.dt_utils import _DISPATCHERS, _REG_MUTEX, _DISPATCHER_MUTEX
@@ -44,7 +44,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
 
         try:
             self.process = psutil.Process(self.trace_pid)
-        except _PSUTIL_NOTFOUND_ERRORS as e:
+        except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             raise e
         _ALL_PIDS.add(trace_pid)
@@ -69,9 +69,9 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
                 self.last_cpu_time = get_total_cpu_time(self.process)
                 with _DISPATCHER_MUTEX:
                     self.detect_process()
-            except _PSUTIL_NOTFOUND_ERRORS:
+            except PSUTIL_NOTFOUND_ERRORS:
                 break
-            sleep(_DEFAULT_REFRESH_INTERVAL)
+            sleep(DEFAULT_REFRESH_INTERVAL)
         self.sigterm()
 
     def write_registry(self):
@@ -94,7 +94,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
                         self.process.cwd()
                     )) + '\n')
                     writer.flush()
-        except _PSUTIL_NOTFOUND_ERRORS as e:
+        except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             raise e
 
@@ -109,7 +109,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
                 writer.write('\t'.join(("NAME", "VALUE")) + '\n')
                 for env_name, env_value in self.process.environ().items():
                     writer.write('\t'.join((env_name, env_value)) + '\n')
-        except _PSUTIL_NOTFOUND_ERRORS as e:
+        except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             raise e
 
@@ -129,7 +129,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
                         str(item.size),
                         str(item.swap)
                     )) + '\n')
-        except _PSUTIL_NOTFOUND_ERRORS as e:
+        except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             raise e
 
@@ -145,7 +145,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
                     _DISPATCHERS[process.pid].start()
                     self.thread_pool.append(_DISPATCHERS[process.pid])
                     FRONTEND_ALL_PIDS.add(process.pid)
-        except _PSUTIL_NOTFOUND_ERRORS as e:
+        except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             raise e
 

@@ -18,11 +18,11 @@ You may use this module in your own project by using its :py:func:`main` functio
 
 __version__ = 0.2
 
-import multiprocessing
 import os
 import signal
 import subprocess
 import sys
+import threading
 import uuid
 from collections import namedtuple
 from typing import List, Optional
@@ -36,7 +36,7 @@ if os.environ.get('SPHINX_BUILD') == 1:
     exit()
 
 
-class _PidMonitorProcess(multiprocessing.Process):
+class _PidMonitorProcess(threading.Thread):
     """
     The standalone pid_monitor.main() process.
     """
@@ -56,6 +56,30 @@ class _PidMonitorProcess(multiprocessing.Process):
                 )
             )
         )
+
+
+def run_process(args: List[str], output_basename:str) -> int:
+    """
+    Runner of the :py:func:`main` function. Can be called by other modules.
+    """
+    os.makedirs(output_basename)
+    try:
+        _MONITORED_PROCESS = subprocess.Popen(
+            args,
+            stdin=subprocess.DEVNULL,
+            stdout=open(os.path.join(output_basename, "proc_profiler.stdout.log"), 'w'),
+            stderr=open(os.path.join(output_basename, "proc_profiler.stderr.log"), 'w'),
+            close_fds=True
+        )
+    except FileNotFoundError:
+        print("Command not found!")
+        return 127
+    pid_monitor_process = _PidMonitorProcess(pid=_MONITORED_PROCESS.pid, output_basename=output_basename)
+    pid_monitor_process.start()
+    exit_value = _MONITORED_PROCESS.wait()
+    pid_monitor_process.join()
+    return exit_value
+
 
 
 def main(args: Optional[List[str]] = None) -> int:
@@ -83,23 +107,7 @@ def main(args: Optional[List[str]] = None) -> int:
 
     output_basename = 'proc_profiler_' + str(uuid.uuid4())
     print(f'Output to: {output_basename}')
-    os.makedirs(output_basename)
-    try:
-        _MONITORED_PROCESS = subprocess.Popen(
-            args,
-            stdin=subprocess.DEVNULL,
-            stdout=open(os.path.join(output_basename, "proc_profiler.stdout.log"), 'w'),
-            stderr=open(os.path.join(output_basename, "proc_profiler.stderr.log"), 'w'),
-            close_fds=True
-        )
-    except FileNotFoundError:
-        print("Command not found!")
-        return 127
-    pid_monitor_process = _PidMonitorProcess(pid=_MONITORED_PROCESS.pid, output_basename=output_basename)
-    pid_monitor_process.start()
-    exit_value = _MONITORED_PROCESS.wait()
-    pid_monitor_process.join()
-    return exit_value
+    return run_process(args, output_basename)
 
 
 def _pass_signal_to_monitored_process(signal_number: int, *_args):

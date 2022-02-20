@@ -14,6 +14,6 @@
 set -ue
 SHDIR="$(dirname "$(readlink -f "${0}")")"
 cd "${SHDIR}" || exit 1
-[ -d .maint ] || git clone ../../ .maint
+[ -d .maint ] || git clone https://gitee.com/yuzjlab/gpmf .maint
 rm -rf .maint/.git # Detach head
 bash .maint/setup.sh

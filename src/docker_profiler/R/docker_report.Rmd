@@ -1,0 +1,12 @@
+---
+title: "Docker Report"
+date:  "`r Sys.time()`"
+output:
+  html_document:
+params:
+  basename: "nervous_williams.log"
+  pid: "nervous_williams"
+  RMD_ARGS: "."
+---
+
+

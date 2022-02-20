@@ -7,7 +7,7 @@ import os
 import signal
 import sys
 
-from pid_monitor import _ALL_PIDS
+from pid_monitor import _ALL_PIDS, PSUTIL_NOTFOUND_ERRORS
 from pid_monitor.dt_utils import terminate_all_dispatchers, _DISPATCHERS
 from pid_monitor.frontend import show_frontend
 from pid_monitor.report import make_all_report
@@ -29,14 +29,18 @@ def main(toplevel_trace_pid: int, report_basename: str) -> int:
     """
     _LOG_HANDLER.info(
         f"Tracer started with toplevel_trace_pid={toplevel_trace_pid} and report_basename={report_basename}")
-    for _signal in (
-            signal.SIGINT,
-            signal.SIGTERM,
-            signal.SIGHUP,
-            signal.SIGABRT,
-            signal.SIGQUIT,
-    ):
-        signal.signal(_signal, terminate_all_dispatchers)
+
+    try:
+        for _signal in (
+                signal.SIGINT,
+                signal.SIGTERM,
+                signal.SIGHUP,
+                signal.SIGABRT,
+                signal.SIGQUIT,
+        ):
+            signal.signal(_signal, terminate_all_dispatchers)
+    except ValueError: # Not main thread
+        pass
 
     initialize_registry(report_basename)
 
@@ -92,7 +96,8 @@ def start_main_tracer_dispatcher(toplevel_trace_pid: int, report_basename: str) 
     """
     try:
         main_dispatcher = ProcessTracerDispatcherThread(toplevel_trace_pid, report_basename)
-    except ValueError:
+    except PSUTIL_NOTFOUND_ERRORS:
+        print("Process not found -- Maybe it is terminated?")
         os.kill(os.getpid(), signal.SIGKILL)
         sys.exit(0)
     _DISPATCHERS[toplevel_trace_pid] = main_dispatcher

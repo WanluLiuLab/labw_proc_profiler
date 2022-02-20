@@ -6,7 +6,7 @@ from time import sleep
 import psutil
 from prettytable import PrettyTable
 
-from pid_monitor import get_total_cpu_time, _PSUTIL_NOTFOUND_ERRORS
+from pid_monitor import get_total_cpu_time, PSUTIL_NOTFOUND_ERRORS
 
 FRONTEND_ALL_PIDS = set()
 """A set of all process/thread ids that have been traced"""
@@ -92,7 +92,7 @@ def _add_row_to_frontend_process_table(pid: int):
             _process.num_threads(),
             len(_process.children())
         )
-    except _PSUTIL_NOTFOUND_ERRORS:
+    except PSUTIL_NOTFOUND_ERRORS:
         FRONTEND_ALL_PIDS.remove(pid)
         return
     _PROCESS_TABLE.add_row(row)

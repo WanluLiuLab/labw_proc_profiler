@@ -37,10 +37,10 @@ logging.basicConfig(
     format='%(asctime)s %(filename)s:%(lineno)s %(levelname)s: %(message)s'
 )
 
-_PSUTIL_NOTFOUND_ERRORS = (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied, psutil.Error)
+PSUTIL_NOTFOUND_ERRORS = (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied, psutil.Error)
 """Some common psutil errors."""
 
-_DEFAULT_REFRESH_INTERVAL = 0.01
+DEFAULT_REFRESH_INTERVAL = 0.01
 
 
 def get_total_cpu_time(_p: psutil.Process) -> float:

@@ -13,7 +13,7 @@ from typing import TextIO
 
 import psutil
 
-from pid_monitor import _DEFAULT_REFRESH_INTERVAL, _PSUTIL_NOTFOUND_ERRORS
+from pid_monitor import DEFAULT_REFRESH_INTERVAL, PSUTIL_NOTFOUND_ERRORS
 from pid_monitor.dt_utils import get_tracer
 
 
@@ -22,7 +22,7 @@ class BaseTracerThread(threading.Thread):
     The base class of all tracers.
     """
 
-    def __init__(self, basename: str, tracee: str, tracer_type: str, interval: float = _DEFAULT_REFRESH_INTERVAL):
+    def __init__(self, basename: str, tracee: str, tracer_type: str, interval: float = DEFAULT_REFRESH_INTERVAL):
         super().__init__()
         self.basename = basename
         """The log basename."""
@@ -54,7 +54,7 @@ class BaseTracerThread(threading.Thread):
             while not self.should_exit:
                 try:
                     self.print_body(writer)
-                except _PSUTIL_NOTFOUND_ERRORS as e:
+                except PSUTIL_NOTFOUND_ERRORS as e:
                     self.log_handler.error(
                         f"TRACEE={self.tracee} TYPE={self.tracer_type}: {e.__class__.__name__} encountered!")
                     return
@@ -79,17 +79,17 @@ class BaseTracerThread(threading.Thread):
 
 
 class BaseSystemTracerThread(BaseTracerThread):
-    def __init__(self, basename: str, tracer_type: str, interval: float = _DEFAULT_REFRESH_INTERVAL):
+    def __init__(self, basename: str, tracer_type: str, interval: float = DEFAULT_REFRESH_INTERVAL):
         super().__init__(basename=basename, tracee='sys', tracer_type=tracer_type, interval=interval)
 
 
 class BaseProcessTracerThread(BaseTracerThread):
-    def __init__(self, trace_pid: int, basename: str, tracer_type: str, interval: float = _DEFAULT_REFRESH_INTERVAL):
+    def __init__(self, trace_pid: int, basename: str, tracer_type: str, interval: float = DEFAULT_REFRESH_INTERVAL):
         super().__init__(basename=basename, tracee=str(trace_pid), tracer_type=tracer_type, interval=interval)
         self.trace_pid = trace_pid
         try:
             self.process = psutil.Process(pid=self.trace_pid)
-        except _PSUTIL_NOTFOUND_ERRORS as e:
+        except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(
                 f"TRACEE={self.trace_pid} TYPE={self.tracer_type}: {e.__class__.__name__} encountered!")
             raise e
@@ -154,7 +154,7 @@ class BaseTracerDispatcherThread(threading.Thread):
         The default runner
         """
         while not self.should_exit:
-            sleep(_DEFAULT_REFRESH_INTERVAL)
+            sleep(DEFAULT_REFRESH_INTERVAL)
 
     def __del__(self):
         """
