@@ -8,7 +8,7 @@ import subprocess
 import threading
 from typing import Set
 
-from pid_monitor import parallel_helper
+from pid_monitor import parallel_helper, DEFAULT_SYSTEM_INDICATOR_PID
 
 _LOG_HANDLER = logging.getLogger()
 """The Logger Handler"""
@@ -31,12 +31,12 @@ class _MakeIndividualReportThread(threading.Thread):
         self.logger = logging.getLogger()
 
     def run(self) -> None:
-        if self.this_pid == 0:
+        if self.this_pid == DEFAULT_SYSTEM_INDICATOR_PID:
             log_filename = f'{self.report_basename}_report_system.log'
         else:
             log_filename = f'{self.report_basename}_report_{self.this_pid}_.log'
         log_writer = open(log_filename, "wt")
-        if self.this_pid == 0:
+        if self.this_pid == DEFAULT_SYSTEM_INDICATOR_PID:
             report_process = subprocess.Popen((
                 'Rscript',
                 os.path.join(_R_FILE_DIR, 'make_system_report.R'),

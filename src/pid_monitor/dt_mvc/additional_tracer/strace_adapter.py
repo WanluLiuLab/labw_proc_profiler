@@ -5,10 +5,12 @@ import subprocess
 from typing import TextIO, Tuple
 
 from pid_monitor import get_timestamp
-from pid_monitor.dt_base import BaseProcessTracerThread
+from pid_monitor.dt_mvc.base_tracer_class import BaseProcessTracerThread
 
 PLINE_ERR_REGEX = re.compile(r"^ = -1 (.+) \(.+\)$")
 PLINE_SIGNAL_REGEX = re.compile(r"--- (.+?) .*")
+
+__all__ = ("ProcessSyscallTracerThread",)
 
 
 class ProcessSyscallTracerThread(BaseProcessTracerThread):

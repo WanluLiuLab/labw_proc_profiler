@@ -33,24 +33,24 @@ class DockerBaseTracerThread(threading.Thread):
         self.basename = basename
         self.should_exit = False
 
+
 class DockerBaseWriterTracerThread(DockerBaseTracerThread):
     out_filename: str
 
-    def __init__(self, trace_container_name: str, basename: str, tracee:str):
+    def __init__(self, trace_container_name: str, basename: str, tracee: str):
         super().__init__(trace_container_name=trace_container_name, basename=basename)
         self.out_filename = f"{self.basename}/{self.trace_container_name}.{tracee}.tsv"
-
 
     def parse_pid(self, stat: dict) -> int:
         total_pids = stat.get('pids_stats', {}).get('current', 0)
         return total_pids
 
     @abstractmethod
-    def print_header(self, writer:TextIO):
+    def print_header(self, writer: TextIO):
         pass
 
     @abstractmethod
-    def print_body(self, writer:TextIO):
+    def print_body(self, writer: TextIO):
         pass
 
     def run(self):
@@ -67,6 +67,7 @@ class DockerBaseWriterTracerThread(DockerBaseTracerThread):
                         return
                 except (APIError, NotFound) as e:
                     raise e
+
 
 class DockerStatsTracerThread(DockerBaseWriterTracerThread):
     """
@@ -94,7 +95,7 @@ class DockerStatsTracerThread(DockerBaseWriterTracerThread):
         used_memory = stat.get('memory_stats', {}).get('usage', 0)
         return used_memory, avail_memory
 
-    def print_header(self, writer:TextIO):
+    def print_header(self, writer: TextIO):
         writer.write(
             "\t".join((
                 "ASCTIME",
@@ -107,7 +108,7 @@ class DockerStatsTracerThread(DockerBaseWriterTracerThread):
             )) + "\n"
         )
 
-    def print_body(self, writer:TextIO):
+    def print_body(self, writer: TextIO):
         stat = self.traced_container.stats(stream=False)
         meminfo = self.parse_memory(stat)
         cpuinfo = self.parse_cpu(stat)
@@ -134,14 +135,13 @@ class DockerTopTracerThread(DockerBaseWriterTracerThread):
     def __init__(self, trace_container_name: str, basename: str):
         super().__init__(trace_container_name, basename, "top")
 
-
-    def print_header(self, writer:TextIO):
+    def print_header(self, writer: TextIO):
         titles = self.traced_container.top().get("Titles", [])
         writer.write(
-            "ASCTIME"+"\t"+"\t".join(titles) + "\n"
+            "ASCTIME" + "\t" + "\t".join(titles) + "\n"
         )
 
-    def print_body(self, writer:TextIO):
+    def print_body(self, writer: TextIO):
         timestamp = get_timestamp()
         top = self.traced_container.top()
         for process in top.get('Processes', []):
@@ -178,15 +178,15 @@ class DockerDispatcherThread(DockerBaseTracerThread):
         with open(f"{self.basename}/{self.trace_container_name}.stderr.log", "wb") as stderr_writer:
             stderr_writer.write(self.traced_container.logs(stdout=False, stderr=True, timestamps=True))
         with open(f"{self.basename}/{self.trace_container_name}.info.tsv", "w") as info_writer:
-            def k_v_write(k:str, v:Any):
+            def k_v_write(k: str, v: Any):
                 rv = repr(v)
                 if len(rv) >= 2 and rv[0] == '\'' and rv[-1] == '\'':
                     rv = rv[1:-1]
                 info_writer.write("\t".join((k, rv)) + "\n")
+
             k_v_write("KEY", "VALUE")
             k_v_write("NAME", self.traced_container.name)
             k_v_write("ID", self.traced_container.id)
             k_v_write("IMAGE_ID", self.traced_container.image.id)
             k_v_write("IMAGE_TAGS", self.traced_container.image.tags)
             k_v_write("LABELS", self.traced_container.labels)
-

@@ -68,7 +68,6 @@ def main(
     """
     if os.environ.get('SPHINX_BUILD') == 1:
         return 0
-    global _MONITORED_PROCESS
     for _signal in (
             signal.SIGINT,
             signal.SIGTERM,

@@ -22,8 +22,8 @@ import sys
 
 import pid_monitor
 from pid_monitor import __version__
-from pid_monitor.dt_utils import list_tracer
-from pid_monitor.main_func import main
+from pid_monitor.dt_mvc.tracer_loader import list_tracer
+from pid_monitor.main_func import trace_pid
 
 _LOG_HANDLER = logging.getLogger()
 """The Logger Handler"""
@@ -45,9 +45,9 @@ if __name__ == '__main__':
     args = _parse_args()
     if args.list_tracer:
         for tracer in list_tracer():
-            print(tracer[0], ":", tracer[1])
+            print(": ".join(tracer))
         sys.exit(0)
     if args.pid is None or args.out is None:
         print(f"-p and -o required in normal mode. Use {sys.argv[0]} --help for help")
         sys.exit(1)
-    sys.exit(main(args.pid, args.out))
+    sys.exit(trace_pid(args.pid, args.out))

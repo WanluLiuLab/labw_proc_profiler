@@ -19,21 +19,11 @@ You may use this module in your own project by using its :py:func:`main` functio
 __version__ = 0.2
 
 import os
-import signal
 import subprocess
-import sys
 import threading
-import uuid
-from collections import namedtuple
-from typing import List, Optional
+from typing import List
 
 from pid_monitor import main_func
-
-_MONITORED_PROCESS = namedtuple('DefaultProcess', 'pid')(pid=os.getpid())
-"""Process being monitored. If monitor not attached, will be myself."""
-
-if os.environ.get('SPHINX_BUILD') == 1:
-    exit()
 
 
 class _PidMonitorProcess(threading.Thread):
@@ -47,21 +37,19 @@ class _PidMonitorProcess(threading.Thread):
         self.output_basename = output_basename
 
     def run(self):
-        main_func.main(
-            self.monitored_pid,
-            os.path.abspath(
-                os.path.expanduser(
-                    os.path.join(
-                        self.output_basename, "proc_profiler", "")
-                )
+        main_func.trace_pid(self.monitored_pid, os.path.abspath(
+            os.path.expanduser(
+                os.path.join(
+                    self.output_basename, "proc_profiler", "")
             )
-        )
+        ))
 
 
-def run_process(args: List[str], output_basename:str) -> int:
+def run_process(args: List[str], output_basename: str) -> int:
     """
     Runner of the :py:func:`main` function. Can be called by other modules.
     """
+    global _MONITORED_PROCESS
     os.makedirs(output_basename)
     try:
         _MONITORED_PROCESS = subprocess.Popen(
@@ -79,40 +67,3 @@ def run_process(args: List[str], output_basename:str) -> int:
     exit_value = _MONITORED_PROCESS.wait()
     pid_monitor_process.join()
     return exit_value
-
-
-
-def main(args: Optional[List[str]] = None) -> int:
-    """
-    :param args: The command-line passed to this module. Should be a list of strings.
-                 If not provided, will use `sys.argv[1:]`.
-    :return: The return value of ``args``.
-    """
-    if args is None:
-        args = sys.argv[1:]
-    if os.environ.get('SPHINX_BUILD') == 1:
-        return 0
-    global _MONITORED_PROCESS
-    for _signal in (
-            signal.SIGINT,
-            signal.SIGTERM,
-            signal.SIGHUP,
-            signal.SIGABRT,
-            signal.SIGQUIT,
-    ):
-        signal.signal(_signal, _pass_signal_to_monitored_process)
-
-    print(f'{__doc__.splitlines()[1]} ver. {__version__}')
-    print(f'Called by: {" ".join(sys.argv)}')
-
-    output_basename = 'proc_profiler_' + str(uuid.uuid4())
-    print(f'Output to: {output_basename}')
-    return run_process(args, output_basename)
-
-
-def _pass_signal_to_monitored_process(signal_number: int, *_args):
-    global _MONITORED_PROCESS
-    try:
-        os.kill(_MONITORED_PROCESS.pid, signal_number)
-    except ProcessLookupError:
-        pass

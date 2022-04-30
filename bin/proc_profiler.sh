@@ -16,4 +16,4 @@ SHDIR="$(dirname "$(readlink -f "${0}")")"
 PROF_PROFILER_DIR="${SHDIR}/../"
 bash "${PROF_PROFILER_DIR}"/setup.sh
 . "${PROF_PROFILER_DIR}"/activate.sh
-python3 -m proc_profiler "${@}"
+exec python3 -m proc_profiler "${@}"

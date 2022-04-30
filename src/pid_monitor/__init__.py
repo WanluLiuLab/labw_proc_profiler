@@ -23,7 +23,7 @@ To use this module in your own project, see :py:mod:`main_func`.
 
 from __future__ import annotations
 
-__version__ = 0.2
+__version__ = "0.3"
 
 import logging
 import time
@@ -42,19 +42,24 @@ PSUTIL_NOTFOUND_ERRORS = (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.Acc
 
 DEFAULT_REFRESH_INTERVAL = 0.01
 
+DEFAULT_SYSTEM_INDICATOR_PID = -1
+
 
 def get_total_cpu_time(_p: psutil.Process) -> float:
     """
     Get total CPU time for a process.
     Should return time spent in system mode (aka. kernel mode) and user mode.
     """
-    cpu_time_tuple = _p.cpu_times()
-    return cpu_time_tuple.system + cpu_time_tuple.user
+    try:
+        cpu_time_tuple = _p.cpu_times()
+        return cpu_time_tuple.system + cpu_time_tuple.user
+    except PSUTIL_NOTFOUND_ERRORS:
+        return -1
 
 
 def get_timestamp() -> str:
     """
     Get timestamp in an accuracy of 0.01 seconds.
     """
-    time_in_ms = time.time() * 1000
+    time_in_ms = time.time() * 100
     return time.strftime(f'%Y-%m-%d %H:%M:%S.{int(time_in_ms % 100)}', time.localtime(time_in_ms / 100.0))

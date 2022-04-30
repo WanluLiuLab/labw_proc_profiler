@@ -19,9 +19,9 @@ library(ggpubr)
 library(knitr)
 
 knitr::opts_chunk$set(
-    echo = FALSE
-    # fig.width = 16,
-    # fig.height = 10
+    echo = FALSE,
+    fig.width = 10,
+    fig.height = 8
 )
 
 #' Maximun number of labels on X axis.

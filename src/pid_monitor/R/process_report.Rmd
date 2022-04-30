@@ -308,7 +308,7 @@ ggplot(child_gathered_table) +
         breaks = breaks_pretty(n = MAX_X_LABS),
         labels = label_date(format = record_time_format)
     ) +
-    scale_y_continuous(
+    scale_y_discrete(
         "Number of child processes & threads",
         breaks = scales::breaks_extended(n = MAX_X_LABS),
         limits = c(0, NA)

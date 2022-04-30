@@ -1,17 +1,15 @@
-import copy
 import subprocess
-import threading
+from logging import getLogger
 from time import sleep
 
-import psutil
 from prettytable import PrettyTable
 
-from pid_monitor import get_total_cpu_time, PSUTIL_NOTFOUND_ERRORS
+from pid_monitor import DEFAULT_REFRESH_INTERVAL
+from pid_monitor.dt_mvc import dispatcher_controller
 
-FRONTEND_ALL_PIDS = set()
-"""A set of all process/thread ids that have been traced"""
+_LOGGER_HANDLER = getLogger(__name__)
 
-_PROCESS_TABLE = PrettyTable((
+_PROCESS_TABLE_COL_NAMES = (
     'PID',
     'PPID',
     'NAME',
@@ -21,8 +19,7 @@ _PROCESS_TABLE = PrettyTable((
     'RESIDENT_MEM',
     'NUM_THREADS',
     'NUM_CHILD_PROCESS'
-))
-"""The process table show at the frontend."""
+)
 
 
 def _to_human_readable(num: int, base: int = 1024) -> str:
@@ -49,61 +46,35 @@ def _print_frontend_system_tracer():
     """
     Print frontend system tracer information.
     """
-    print(f"CPU%: {psutil.cpu_percent(0.1)}")
-    x = psutil.virtual_memory()
-    print(
-        "VIRTUALMEM: " +
-        f"AVAIL: {_to_human_readable(x.available)}/{_to_human_readable(x.total)}" +
-        f"={round(x.available / x.total * 100, 2)}%" +
-        f"BUFFER: {_to_human_readable(x.buffers)}" +
-        f" SHARED {_to_human_readable(x.shared)}")
-    x = psutil.swap_memory()
-    print(
-        f"SWAP: " +
-        f"AVAIL: {_to_human_readable(x.free)}/{_to_human_readable(x.total)}" +
-        f"={100 - x.percent}% " +
-        f"I/O: {_to_human_readable(x.sin)}/{_to_human_readable(x.sout)}")
+    all_info = dispatcher_controller.collect_system_info()
+    print("".join((
+        "CPU%: ", all_info['CPU%'], "; ",
+        "VIRTUALMEM: ",
+        "AVAIL: ", all_info['VM_AVAIL'], "/", all_info['VM_TOTAL'], "=(", all_info['VM_PERCENT'], "), ",
+        "BUFFERED: ", all_info['BUFFERED'], ", ", "SHARED: ", all_info['SHARED'], "; ",
+        "SWAP: ",
+        "AVAIL: ", all_info['SWAP_AVAIL'], "/", all_info['SWAP_TOTAL'], "=(", all_info['SWAP_PERCENT'], ") "
+    ))
+    )
 
 
-def _print_frontend_process_tracer():
-    thread_pool = []
-    all_pids_tmp = copy.deepcopy(FRONTEND_ALL_PIDS)
-    for pid in all_pids_tmp:
-        thread_pool.append(threading.Thread(_add_row_to_frontend_process_table(pid)))
-        thread_pool[-1].start()
-    for thread in thread_pool:
-        thread.join()
-    print(_PROCESS_TABLE)
-    _PROCESS_TABLE.clear_rows()
+def _print_frontend_process_tracer(process_table: PrettyTable):
+    all_info = dispatcher_controller.collect_all_process_info()
+    for pid_val in all_info.values():
+        row = [pid_val[name] for name in _PROCESS_TABLE_COL_NAMES]
+        process_table.add_row(row)
+    print(process_table)
+    process_table.clear_rows()
 
 
-def _add_row_to_frontend_process_table(pid: int):
-    """Add a row to the process table"""
-    try:
-        _process = psutil.Process(pid)
-        row = (
-            _process.pid,
-            _process.ppid(),
-            _process.name(),
-            _process.status(),
-            str(_process.cpu_percent(0.1)),
-            str(get_total_cpu_time(_process)),
-            str(_to_human_readable(_process.memory_info().rss)),
-            _process.num_threads(),
-            len(_process.children())
-        )
-    except PSUTIL_NOTFOUND_ERRORS:
-        FRONTEND_ALL_PIDS.remove(pid)
-        return
-    _PROCESS_TABLE.add_row(row)
-
-
-def show_frontend(toplevel_trace_pid: int):
+def show_frontend(
+        interval: float = DEFAULT_REFRESH_INTERVAL
+):
     """Show the frontend."""
-    FRONTEND_ALL_PIDS.add(toplevel_trace_pid)
-    while psutil.pid_exists(toplevel_trace_pid):
+    process_table = PrettyTable(_PROCESS_TABLE_COL_NAMES)
+    while len(dispatcher_controller.get_current_active_pids()) > 1:
         subprocess.call('clear')
         _print_frontend_system_tracer()
-        _print_frontend_process_tracer()
-        sleep(1.5)
-    print("Toplevel PID finished")
+        _print_frontend_process_tracer(process_table)
+        sleep(interval * 100)
+    _LOGGER_HANDLER.info("Toplevel PID finished")

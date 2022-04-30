@@ -65,3 +65,5 @@ docker_profiler_*/
 # .idea/modules
 # *.iml
 # *.ipr
+
+.vscode/
