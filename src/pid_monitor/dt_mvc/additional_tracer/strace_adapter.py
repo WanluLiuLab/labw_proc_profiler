@@ -72,9 +72,9 @@ class ProcessSyscallTracerThread(BaseProcessTracerThread):
         return call, err, ""
 
     def run_body(self):
-        raw_out_file = f"{self.basename}.{self.trace_pid}.strace_raw.txt.xz"
-        syscall_out_file = f"{self.basename}.{self.trace_pid}.strace_call.tsv"
-        err_out_file = f"{self.basename}.{self.trace_pid}.strace_err.tsv"
+        raw_out_file = f"{self.output_basename}.{self.trace_pid}.strace_raw.txt.xz"
+        syscall_out_file = f"{self.output_basename}.{self.trace_pid}.strace_call.tsv"
+        err_out_file = f"{self.output_basename}.{self.trace_pid}.strace_err.tsv"
 
         with subprocess.Popen((
                 self.strace_path,

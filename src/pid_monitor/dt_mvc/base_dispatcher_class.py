@@ -16,10 +16,10 @@ class BaseTracerDispatcherThread(threading.Thread):
     """
     The base class of all dispatchers.
     """
-    basename: str
+    output_basename: str
     """The report basename."""
 
-    dispatchee: int
+    trace_pid: int
     """What is being traced? PID for process, DEFAULT_SYSTEM_INDICATOR_PID for system"""
 
     thread_pool: Dict[str, threading.Thread]
@@ -41,24 +41,25 @@ class BaseTracerDispatcherThread(threading.Thread):
 
     def __init__(
             self,
-            dispatchee: int,
-            basename: str,
+            trace_pid: int,
+            output_basename: str,
+            tracers_to_load: tracers_to_load,
             interval: float,
             dispatcher_controller: DispatcherController
     ):
         super().__init__()
         self.log_handler = logging.getLogger()
-        self.basename = basename
-        self.dispatchee = dispatchee
+        self.output_basename = output_basename
+        self.trace_pid = trace_pid
         self.thread_pool = {}
-        self.tracers_to_load = []
+        self.tracers_to_load = tracers_to_load
         self.interval = interval
         self.tracer_kwargs = {
-            "basename": self.basename,
+            "output_basename": self.output_basename,
             "interval": self.interval
         }
         self.should_exit = False
-        dispatcher_controller.register_dispatcher(self.dispatchee, self)
+        dispatcher_controller.register_dispatcher(self.trace_pid, self)
         self.dispatcher_controller = dispatcher_controller
 
     def append_threadpool(self, thread: threading.Thread):
@@ -68,16 +69,16 @@ class BaseTracerDispatcherThread(threading.Thread):
         """Start loaded tracers. Should be called at the end of :py:func:`init`."""
         for tracer in self.tracers_to_load:
             try:
-                self.log_handler.info(f"DISPATCHEE={self.dispatchee}: Fetch TRACER={tracer}")
+                self.log_handler.info(f"trace_pid={self.trace_pid}: Fetch TRACER={tracer}")
                 new_thread = get_tracer_class(tracer)(**self.tracer_kwargs)
-                self.log_handler.info(f"DISPATCHEE={self.dispatchee}: Fetch TRACER={tracer} SUCCESS")
+                self.log_handler.info(f"trace_pid={self.trace_pid}: Fetch TRACER={tracer} SUCCESS")
             except Exception as e:
                 self.log_handler.error(
-                    f"DISPATCHEE={self.dispatchee}: Fetch TRACER={tracer} {e.__class__.__name__} encountered!"
+                    f"trace_pid={self.trace_pid}: Fetch TRACER={tracer} {e.__class__.__name__} encountered!"
                 )
                 continue
             new_thread.start()
-            self.log_handler.info(f"DISPATCHEE={self.dispatchee}: Start TRACER={tracer}")
+            self.log_handler.info(f"trace_pid={self.trace_pid}: Start TRACER={tracer}")
             self.append_threadpool(new_thread)
 
     @abstractmethod
@@ -88,9 +89,9 @@ class BaseTracerDispatcherThread(threading.Thread):
         pass
 
     def run(self):
-        self.log_handler.info(f"Dispatcher for DISPATCHEE={self.dispatchee} started")
+        self.log_handler.info(f"Dispatcher for trace_pid={self.trace_pid} started")
         self.run_body()
-        self.log_handler.info(f"Dispatcher for DISPATCHEE={self.dispatchee} stopped")
+        self.log_handler.info(f"Dispatcher for trace_pid={self.trace_pid} stopped")
 
     @abstractmethod
     def run_body(self):
@@ -116,9 +117,9 @@ class BaseTracerDispatcherThread(threading.Thread):
         - Terminate all threads in ``thread_pool``
         - Suicide.
         """
-        self.log_handler.info(f"Dispatcher for DISPATCHEE={self.dispatchee} SIGTERM")
+        self.log_handler.info(f"Dispatcher for trace_pid={self.trace_pid} SIGTERM")
         self.before_ending()
-        self.dispatcher_controller.remove_dispatcher(self.dispatchee)
+        self.dispatcher_controller.remove_dispatcher(self.trace_pid)
         for thread in self.thread_pool.values():
             try:
                 thread.should_exit = True
@@ -137,7 +138,7 @@ class BaseTracerDispatcherThread(threading.Thread):
 
     def __repr__(self):
         try:
-            return f"Dispatcher for {self.dispatchee}"
+            return f"Dispatcher for {self.trace_pid}"
         except AttributeError:
             return "Dispatcher under construction"
 

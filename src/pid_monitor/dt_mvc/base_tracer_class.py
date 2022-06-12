@@ -6,14 +6,14 @@ from typing import TextIO
 
 import psutil
 
-from pid_monitor import PSUTIL_NOTFOUND_ERRORS
+from pid_monitor import PSUTIL_NOTFOUND_ERRORS, DEFAULT_SYSTEM_INDICATOR_PID
 
 
 class BaseTracerThread(threading.Thread):
     """
     The base class of all tracers.
     """
-    basename: str
+    output_basename: str
     """The log basename."""
 
     interval: float
@@ -22,8 +22,8 @@ class BaseTracerThread(threading.Thread):
     tracer_type: str
     """What aspect is being traced? CPU, memory or others?"""
 
-    tracee: str
-    """What is being traced? 'sys' for System, `pid` for processes or threads."""
+    trace_pid: int
+    """What is being traced? DEFAULT_SYSTEM_INDICATOR_PID for System, ``pid`` for processes or threads."""
 
     should_exit: bool
     """Whether this thread should be terminated"""
@@ -33,27 +33,30 @@ class BaseTracerThread(threading.Thread):
 
     def __init__(
             self,
-            basename: str,
-            tracee: str,
+            output_basename: str,
+            trace_pid: int,
             tracer_type: str,
             interval
     ):
         super().__init__()
-        self.basename = basename
+        self.output_basename = output_basename
         self.interval = interval
         self.tracer_type = tracer_type
-        self.tracee = tracee
+        self.trace_pid = trace_pid
         self.should_exit = False
         self.log_handler = logging.getLogger()
-        self.log_handler.debug(f"Tracer for TRACEE={self.tracee} TYPE={self.tracer_type} added")
+        self.log_handler.debug(f"Tracer for TRACE_PID={self.trace_pid} TYPE={self.tracer_type} added")
 
     def run(self):
-        self.log_handler.debug(f"Tracer for TRACEE={self.tracee} TYPE={self.tracer_type} started")
+        self.log_handler.debug(f"Tracer for TRACE_PID={self.trace_pid} TYPE={self.tracer_type} started")
         self.run_body()
-        self.log_handler.debug(f"Tracer for TRACEE={self.tracee} TYPE={self.tracer_type} stopped")
+        self.log_handler.debug(f"Tracer for TRACE_PID={self.trace_pid} TYPE={self.tracer_type} stopped")
 
     def run_body(self):
-        out_file = f"{self.basename}.{self.tracee}.{self.tracer_type}.tsv"
+        if self.trace_pid == DEFAULT_SYSTEM_INDICATOR_PID:
+            out_file = f"{self.output_basename}.sys.{self.tracer_type}.tsv"
+        else:
+            out_file = f"{self.output_basename}.{self.trace_pid}.{self.tracer_type}.tsv"
         with open(out_file, 'w') as writer:
             self.print_header(writer)
             writer.flush()
@@ -62,7 +65,8 @@ class BaseTracerThread(threading.Thread):
                     self.print_body(writer)
                 except PSUTIL_NOTFOUND_ERRORS as e:
                     self.log_handler.error(
-                        f"TRACEE={self.tracee} TYPE={self.tracer_type}: {e.__class__.__name__} encountered!")
+                        f"TRACE_PID={self.trace_pid} TYPE={self.tracer_type}: {e.__class__.__name__} encountered!"
+                    )
                     return
                 writer.flush()
                 sleep(self.interval)
@@ -77,7 +81,7 @@ class BaseTracerThread(threading.Thread):
 
     def __repr__(self):
         try:
-            return f"{self.tracer_type} monitor for {self.tracee}"
+            return f"{self.tracer_type} monitor for {self.trace_pid}"
         except AttributeError:
             return "Monitor under construction"
 
@@ -88,13 +92,13 @@ class BaseTracerThread(threading.Thread):
 class BaseSystemTracerThread(BaseTracerThread, ABC):
     def __init__(
             self,
-            basename: str,
+            output_basename: str,
             tracer_type: str,
             interval
     ):
         super().__init__(
-            basename=basename,
-            tracee='sys',
+            output_basename=output_basename,
+            trace_pid=DEFAULT_SYSTEM_INDICATOR_PID,
             tracer_type=tracer_type,
             interval=interval
         )
@@ -104,13 +108,13 @@ class BaseProcessTracerThread(BaseTracerThread, ABC):
     def __init__(
             self,
             trace_pid: int,
-            basename: str,
+            output_basename: str,
             tracer_type: str,
             interval
     ):
         super().__init__(
-            basename=basename,
-            tracee=str(trace_pid),
+            output_basename=output_basename,
+            trace_pid=trace_pid,
             tracer_type=tracer_type,
             interval=interval
         )
@@ -119,5 +123,5 @@ class BaseProcessTracerThread(BaseTracerThread, ABC):
             self.process = psutil.Process(pid=self.trace_pid)
         except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(
-                f"TRACEE={self.trace_pid} TYPE={self.tracer_type}: {e.__class__.__name__} encountered!")
+                f"TRACE_PID={self.trace_pid} TYPE={self.tracer_type}: {e.__class__.__name__} encountered!")
             raise e

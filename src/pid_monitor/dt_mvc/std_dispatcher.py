@@ -34,7 +34,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
     def __init__(
             self,
             trace_pid: int,
-            basename: str,
+            output_basename: str,
             tracers_to_load: List[str],
             interval: float,
             dispatcher_controller: DispatcherController
@@ -50,13 +50,12 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         - Start load_tracers.
         """
         super().__init__(
-            dispatchee=trace_pid,
-            basename=basename,
+            trace_pid=trace_pid,
+            output_basename=output_basename,
+            tracers_to_load=tracers_to_load,
             interval=interval,
             dispatcher_controller=dispatcher_controller
         )
-        self.tracers_to_load = tracers_to_load
-        self.trace_pid = trace_pid
 
         try:
             self.process = psutil.Process(self.trace_pid)
@@ -101,7 +100,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         """
         try:
             with _REG_MUTEX:
-                with open(f"{self.basename}.reg.tsv", mode='a') as writer:
+                with open(f"{self.output_basename}.reg.tsv", mode='a') as writer:
                     writer.write('\t'.join((
                         get_timestamp(),
                         str(self.trace_pid),
@@ -121,7 +120,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         If the process changes its environment variable during execution, it will NOT be recorded!
         """
         try:
-            with open(f"{self.basename}.{self.trace_pid}.env.tsv", mode='w') as writer:
+            with open(f"{self.output_basename}.{self.trace_pid}.env.tsv", mode='w') as writer:
                 writer.write('\t'.join(("NAME", "VALUE")) + '\n')
                 for env_name, env_value in self.process.environ().items():
                     writer.write('\t'.join((env_name, env_value)) + '\n')
@@ -136,7 +135,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         Mapfile information shows how files, especially libraries are stored in memory.
         """
         try:
-            with open(f"{self.basename}.{self.trace_pid}.mapfile.tsv", mode='w') as writer:
+            with open(f"{self.output_basename}.{self.trace_pid}.mapfile.tsv", mode='w') as writer:
                 writer.write('\t'.join(("PATH", "RESIDENT", "VIRT", "SWAP")) + '\n')
                 for item in self.process.memory_maps():
                     writer.write('\t'.join((
@@ -159,7 +158,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
                     self.log_handler.info(f"Sub-process {process.pid} detected.")
                     new_thread = ProcessTracerDispatcherThread(
                         trace_pid=process.pid,
-                        basename=self.basename,
+                        output_basename=self.output_basename,
                         tracers_to_load=self.tracers_to_load,
                         interval=self.interval,
                         dispatcher_controller=self.dispatcher_controller
@@ -176,7 +175,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
 
         - Record CPU time.
         """
-        with open(f"{self.basename}.{self.trace_pid}.cputime", mode='w') as writer:
+        with open(f"{self.output_basename}.{self.trace_pid}.cputime", mode='w') as writer:
             writer.write(str(self._cached_last_cpu_time) + '\n')
 
     def _setup_cache(self):
@@ -258,16 +257,21 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
     def collect_information(self) -> Dict[str, str]:
         return self._frontend_cache
 
-    def __init__(self, basename: str, tracers_to_load: List[str], interval: float,
-                 dispatcher_controller: DispatcherController):
+    def __init__(
+            self,
+            basename: str,
+            tracers_to_load: List[str],
+            interval: float,
+            dispatcher_controller: DispatcherController
+    ):
         super().__init__(
-            dispatchee=DEFAULT_SYSTEM_INDICATOR_PID,
-            basename=basename,
+            trace_pid=DEFAULT_SYSTEM_INDICATOR_PID,
+            output_basename=basename,
+            tracers_to_load=tracers_to_load,
             interval=interval,
             dispatcher_controller=dispatcher_controller
         )
         self._setup_cache()
-        self.tracers_to_load = tracers_to_load
         self._write_mnt()
         self.start_tracers()
 
@@ -280,7 +284,7 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
         """
         Write mounted volumes to ``mnt.csv``.
         """
-        with open(f"{self.basename}.mnt.tsv", mode='w') as writer:
+        with open(f"{self.output_basename}.mnt.tsv", mode='w') as writer:
             writer.write('\t'.join((
                 "DEVICE",
                 "MOUNT_POINT",

@@ -39,7 +39,7 @@ class _PidMonitorProcess(threading.Thread):
     def run(self):
         main_func.trace_pid(
             toplevel_trace_pid=self.monitored_pid,
-            report_basename=os.path.abspath(os.path.expanduser(os.path.join(
+            output_basename=os.path.abspath(os.path.expanduser(os.path.join(
                 self.output_basename, "proc_profiler", ""
             )))
         )

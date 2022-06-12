@@ -19,9 +19,9 @@ _LOG_HANDLER = logging.getLogger()
 """The Logger Handler"""
 
 
-def _initialize_registry(report_basename: str):
+def _initialize_registry(output_basename: str):
     """Initialize process registry."""
-    with open(f"{report_basename}.reg.tsv", mode='a') as writer:
+    with open(f"{output_basename}.reg.tsv", mode='a') as writer:
         writer.write('\t'.join((
             "TIME",
             "PID",
@@ -32,7 +32,7 @@ def _initialize_registry(report_basename: str):
 
 
 def _start_system_tracer_dispatcher(
-        report_basename: str,
+        output_basename: str,
         system_level_tracers: List[str],
         interval: float,
         dispatcher_controller: DispatcherController
@@ -41,7 +41,7 @@ def _start_system_tracer_dispatcher(
     Start system tracer dispatcher.
     """
     system_dispatcher_process = SystemTracerDispatcherThread(
-        basename=report_basename,
+        basename=output_basename,
         tracers_to_load=system_level_tracers,
         interval=interval,
         dispatcher_controller=dispatcher_controller
@@ -53,7 +53,7 @@ def _start_system_tracer_dispatcher(
 
 def _start_main_tracer_dispatcher(
         toplevel_trace_pid: int,
-        report_basename: str,
+        output_basename: str,
         process_level_tracers: List[str],
         interval: float,
         dispatcher_controller: DispatcherController
@@ -62,13 +62,9 @@ def _start_main_tracer_dispatcher(
     Start the main dispatcher over traced process. If failed, suicide.
     """
     try:
-        main_dispatcher = ProcessTracerDispatcherThread(
-            trace_pid=toplevel_trace_pid,
-            basename=report_basename,
-            tracers_to_load=process_level_tracers,
-            interval=interval,
-            dispatcher_controller=dispatcher_controller
-        )
+        main_dispatcher = ProcessTracerDispatcherThread(trace_pid=toplevel_trace_pid, output_basename=output_basename,
+                                                        tracers_to_load=process_level_tracers, interval=interval,
+                                                        dispatcher_controller=dispatcher_controller)
     except PSUTIL_NOTFOUND_ERRORS:
         _LOG_HANDLER.error(f"Process pid={toplevel_trace_pid} not found -- Maybe it is terminated?")
         os.kill(os.getpid(), signal.SIGKILL)
@@ -80,7 +76,7 @@ def _start_main_tracer_dispatcher(
 
 def trace_pid(
         toplevel_trace_pid: int,
-        report_basename: str,
+        output_basename: str,
         process_level_tracers: List[str] = DEFAULT_PROCESS_LEVEL_TRACERS,
         system_level_tracers: List[str] = DEFAULT_SYSTEM_LEVEL_TRACERS,
         interval: float = DEFAULT_REFRESH_INTERVAL,
@@ -92,11 +88,11 @@ def trace_pid(
     You may use this function in your own projects.
 
     :param toplevel_trace_pid: The process ID to trace.
-    :param report_basename: Basename of the report.
+    :param output_basename: Basename of the report.
     :return: 0 for success.
     """
     _LOG_HANDLER.info(
-        f"Tracer started with toplevel_trace_pid={toplevel_trace_pid} and report_basename={report_basename}"
+        f"Tracer started with toplevel_trace_pid={toplevel_trace_pid} and output_basename={output_basename}"
     )
     dispatcher_controller = DispatcherController()
 
@@ -112,16 +108,16 @@ def trace_pid(
     except ValueError:  # Not main thread
         pass
 
-    _initialize_registry(report_basename)
+    _initialize_registry(output_basename)
     system_tracer_dispatcher = _start_system_tracer_dispatcher(
-        report_basename=report_basename,
+        output_basename=output_basename,
         system_level_tracers=system_level_tracers,
         interval=interval,
         dispatcher_controller=dispatcher_controller
     )
     main_tracer_dispatcher = _start_main_tracer_dispatcher(
         toplevel_trace_pid=toplevel_trace_pid,
-        report_basename=report_basename,
+        output_basename=output_basename,
         process_level_tracers=process_level_tracers,
         interval=interval,
         dispatcher_controller=dispatcher_controller
@@ -140,5 +136,6 @@ def trace_pid(
 
     # Make report
     if make_report:
-        make_all_report(dispatcher_controller.all_pids, report_basename)
+        print(list(dispatcher_controller.all_pids))
+        make_all_report(dispatcher_controller.all_pids, output_basename)
     return 0

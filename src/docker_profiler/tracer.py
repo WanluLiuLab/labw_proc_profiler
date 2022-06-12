@@ -30,7 +30,7 @@ class DockerBaseTracerThread(threading.Thread):
         except (docker.errors.NotFound, APIError) as e:
             raise e
         self.trace_container_name = trace_container_name
-        self.basename = basename
+        self.output_basename = basename
         self.should_exit = False
 
 
@@ -39,7 +39,7 @@ class DockerBaseWriterTracerThread(DockerBaseTracerThread):
 
     def __init__(self, trace_container_name: str, basename: str, tracee: str):
         super().__init__(trace_container_name=trace_container_name, basename=basename)
-        self.out_filename = f"{self.basename}/{self.trace_container_name}.{tracee}.tsv"
+        self.out_filename = f"{self.output_basename}/{self.trace_container_name}.{tracee}.tsv"
 
     def parse_pid(self, stat: dict) -> int:
         total_pids = stat.get('pids_stats', {}).get('current', 0)
@@ -167,17 +167,17 @@ class DockerDispatcherThread(DockerBaseTracerThread):
                 DockerTopTracerThread
         ):
             try:
-                self.tracers.append(cls(self.trace_container_name, self.basename))
+                self.tracers.append(cls(self.trace_container_name, self.output_basename))
                 self.tracers[-1].start()
             except (NotFound, APIError) as e:
                 raise e
         for tracer in self.tracers:
             tracer.join()
-        with open(f"{self.basename}/{self.trace_container_name}.stdout.log", "wb") as stdout_writer:
+        with open(f"{self.output_basename}/{self.trace_container_name}.stdout.log", "wb") as stdout_writer:
             stdout_writer.write(self.traced_container.logs(stdout=True, stderr=False, timestamps=True))
-        with open(f"{self.basename}/{self.trace_container_name}.stderr.log", "wb") as stderr_writer:
+        with open(f"{self.output_basename}/{self.trace_container_name}.stderr.log", "wb") as stderr_writer:
             stderr_writer.write(self.traced_container.logs(stdout=False, stderr=True, timestamps=True))
-        with open(f"{self.basename}/{self.trace_container_name}.info.tsv", "w") as info_writer:
+        with open(f"{self.output_basename}/{self.trace_container_name}.info.tsv", "w") as info_writer:
             def k_v_write(k: str, v: Any):
                 rv = repr(v)
                 if len(rv) >= 2 and rv[0] == '\'' and rv[-1] == '\'':

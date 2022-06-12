@@ -79,14 +79,18 @@ def get_timestamp() -> str:
     return time.strftime(f'%Y-%m-%d %H:%M:%S.{int(time_in_ms % 100)}', time.localtime(time_in_ms / 100.0))
 
 
-def to_human_readable(num: int, base: int = 1024) -> str:
+def to_human_readable(
+        num: int,
+        base: int = 1024,
+        suffix: str = "B"
+) -> str:
     """
     Make an integer to 1000- or 1024-based human-readable form.
     """
     if base == 1024:
-        dc_list = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB']
+        dc_list = ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei']
     elif base == 1000:
-        dc_list = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']
+        dc_list = ['', 'K', 'M', 'G', 'T', 'P', 'E']
     else:
         raise ValueError("base should be 1000 or 1024")
     step = 0
@@ -96,4 +100,4 @@ def to_human_readable(num: int, base: int = 1024) -> str:
         num /= base
         dc = dc_list[step]
     num = round(num, 2)
-    return str(num) + dc
+    return str(num) + dc + suffix
