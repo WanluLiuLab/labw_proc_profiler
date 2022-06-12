@@ -6,7 +6,7 @@ from typing import TextIO
 
 import psutil
 
-from pid_monitor import DEFAULT_REFRESH_INTERVAL, PSUTIL_NOTFOUND_ERRORS
+from pid_monitor import PSUTIL_NOTFOUND_ERRORS
 
 
 class BaseTracerThread(threading.Thread):
@@ -36,7 +36,7 @@ class BaseTracerThread(threading.Thread):
             basename: str,
             tracee: str,
             tracer_type: str,
-            interval: float = DEFAULT_REFRESH_INTERVAL
+            interval
     ):
         super().__init__()
         self.basename = basename
@@ -90,7 +90,7 @@ class BaseSystemTracerThread(BaseTracerThread, ABC):
             self,
             basename: str,
             tracer_type: str,
-            interval: float = DEFAULT_REFRESH_INTERVAL
+            interval
     ):
         super().__init__(
             basename=basename,
@@ -106,7 +106,7 @@ class BaseProcessTracerThread(BaseTracerThread, ABC):
             trace_pid: int,
             basename: str,
             tracer_type: str,
-            interval: float = DEFAULT_REFRESH_INTERVAL
+            interval
     ):
         super().__init__(
             basename=basename,

@@ -1,41 +1,19 @@
 import statistics
 import threading
 from time import sleep
-from typing import Dict
+from typing import Dict, List
 
 import psutil
 
-from pid_monitor import _ALL_PIDS, PSUTIL_NOTFOUND_ERRORS, DEFAULT_REFRESH_INTERVAL, DEFAULT_SYSTEM_INDICATOR_PID
+from pid_monitor import PSUTIL_NOTFOUND_ERRORS, DEFAULT_SYSTEM_INDICATOR_PID, to_human_readable
 from pid_monitor import get_timestamp, get_total_cpu_time
-from pid_monitor.dt_mvc.base_dispatcher_class import BaseTracerDispatcherThread
-from pid_monitor.dt_mvc.dispatcher_controller import register_dispatcher, \
-    get_current_active_pids, remove_dispatcher
+from pid_monitor.dt_mvc.base_dispatcher_class import BaseTracerDispatcherThread, DispatcherController
 
 _REG_MUTEX = threading.Lock()
 """Mutex for writing registries"""
 
 _DISPATCHER_MUTEX = threading.Lock()
 """Mutex for creating dispatchers for new process/thread"""
-
-
-def _to_human_readable(num: int, base: int = 1024) -> str:
-    """
-    Make an integer to 1000- or 1024-based human-readable form.
-    """
-    if base == 1024:
-        dc_list = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB']
-    elif base == 1000:
-        dc_list = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']
-    else:
-        raise ValueError("base should be 1000 or 1024")
-    step = 0
-    dc = dc_list[step]
-    while num > base and step < len(dc_list) - 1:
-        step = step + 1
-        num /= base
-        dc = dc_list[step]
-    num = round(num, 2)
-    return str(num) + dc
 
 
 class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
@@ -53,7 +31,14 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
     def collect_information(self) -> Dict[str, str]:
         return self._frontend_cache
 
-    def __init__(self, trace_pid: int, basename: str, loaded_tracers=None):
+    def __init__(
+            self,
+            trace_pid: int,
+            basename: str,
+            tracers_to_load: List[str],
+            interval: float,
+            dispatcher_controller: DispatcherController
+    ):
         """
         The constructor of the class will do following things:
 
@@ -64,19 +49,13 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         - Write mapfile information.
         - Start load_tracers.
         """
-        super().__init__(str(trace_pid), basename)
-        register_dispatcher(trace_pid, self)
-        self.loaded_tracers = loaded_tracers
-        if self.loaded_tracers is None:
-            self.loaded_tracers = (
-                "ProcessIOTracerThread",
-                "ProcessFDTracerThread",
-                "ProcessMEMTracerThread",
-                "ProcessChildTracerThread",
-                "ProcessCPUTracerThread",
-                "ProcessSTATTracerThread",
-                "ProcessSyscallTracerThread"
-            )
+        super().__init__(
+            dispatchee=trace_pid,
+            basename=basename,
+            interval=interval,
+            dispatcher_controller=dispatcher_controller
+        )
+        self.tracers_to_load = tracers_to_load
         self.trace_pid = trace_pid
 
         try:
@@ -85,8 +64,6 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             raise e
-
-        _ALL_PIDS.add(trace_pid)
 
         self._write_registry()
         self._write_env()
@@ -110,7 +87,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
                     self._detect_process()
             except PSUTIL_NOTFOUND_ERRORS:
                 break
-            sleep(DEFAULT_REFRESH_INTERVAL)
+            sleep(self.interval)
         self.sigterm()
 
     def _write_registry(self):
@@ -178,9 +155,15 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         """
         try:
             for process in self.process.children():
-                if process.pid not in get_current_active_pids():
+                if process.pid not in self.dispatcher_controller.get_current_active_pids():
                     self.log_handler.info(f"Sub-process {process.pid} detected.")
-                    new_thread = ProcessTracerDispatcherThread(process.pid, self.basename)
+                    new_thread = ProcessTracerDispatcherThread(
+                        trace_pid=process.pid,
+                        basename=self.basename,
+                        tracers_to_load=self.tracers_to_load,
+                        interval=self.interval,
+                        dispatcher_controller=self.dispatcher_controller
+                    )
                     new_thread.start()
                     self.append_threadpool(new_thread)
         except PSUTIL_NOTFOUND_ERRORS as e:
@@ -195,7 +178,6 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         """
         with open(f"{self.basename}.{self.trace_pid}.cputime", mode='w') as writer:
             writer.write(str(self._cached_last_cpu_time) + '\n')
-        remove_dispatcher(self.trace_pid)
 
     def _setup_cache(self):
         """
@@ -231,7 +213,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         self._frontend_cache["CPU%"] = str(
             self.thread_pool["ProcessCPUTracerThread"].get_cached_cpu_percent()
         )
-        self._frontend_cache["RESIDENT_MEM"] = _to_human_readable(
+        self._frontend_cache["RESIDENT_MEM"] = to_human_readable(
             self.thread_pool["ProcessMEMTracerThread"].get_cached_resident_mem()
         )
         thread_child_process_num = \
@@ -276,17 +258,16 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
     def collect_information(self) -> Dict[str, str]:
         return self._frontend_cache
 
-    def __init__(self, basename: str, loaded_tracers=None):
-        super().__init__(dispatchee="sys", basename=basename)
-        register_dispatcher(DEFAULT_SYSTEM_INDICATOR_PID, self)
+    def __init__(self, basename: str, tracers_to_load: List[str], interval: float,
+                 dispatcher_controller: DispatcherController):
+        super().__init__(
+            dispatchee=DEFAULT_SYSTEM_INDICATOR_PID,
+            basename=basename,
+            interval=interval,
+            dispatcher_controller=dispatcher_controller
+        )
         self._setup_cache()
-        self.loaded_tracers = loaded_tracers
-        if self.loaded_tracers is None:
-            self.loaded_tracers = (
-                "SystemMEMTracerThread",
-                "SystemCPUTracerThread",
-                "SystemSWAPTracerThread"
-            )
+        self.tracers_to_load = tracers_to_load
         self._write_mnt()
         self.start_tracers()
 
@@ -324,18 +305,18 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
             statistics.mean(self.thread_pool["SystemCPUTracerThread"].get_cached_cpu_percent()), 2
         )) + "%"
         mem_info = self.thread_pool["SystemMEMTracerThread"].get_cached_vm_info()
-        self._frontend_cache["VM_AVAIL"] = _to_human_readable(mem_info[0])
-        self._frontend_cache["VM_TOTAL"] = _to_human_readable(mem_info[1])
+        self._frontend_cache["VM_AVAIL"] = to_human_readable(mem_info[0])
+        self._frontend_cache["VM_TOTAL"] = to_human_readable(mem_info[1])
         if mem_info[1] != 0:
-            self._frontend_cache["VM_PERCENT"] = str(round(mem_info[0]/mem_info[1] * 100, 2)) + "%"
+            self._frontend_cache["VM_PERCENT"] = str(round(mem_info[0] / mem_info[1] * 100, 2)) + "%"
         else:
             self._frontend_cache["VM_PERCENT"] = "0.00%"
-        self._frontend_cache["BUFFERED"] = _to_human_readable(mem_info[2])
-        self._frontend_cache["SHARED"] = _to_human_readable(mem_info[3])
+        self._frontend_cache["BUFFERED"] = to_human_readable(mem_info[2])
+        self._frontend_cache["SHARED"] = to_human_readable(mem_info[3])
         swap_info = self.thread_pool["SystemSWAPTracerThread"].get_cached_swap_info()
-        self._frontend_cache["SWAP_AVAIL"] = _to_human_readable(swap_info[0])
-        self._frontend_cache["SWAP_TOTAL"] = _to_human_readable(swap_info[1])
+        self._frontend_cache["SWAP_AVAIL"] = to_human_readable(swap_info[0])
+        self._frontend_cache["SWAP_TOTAL"] = to_human_readable(swap_info[1])
         if swap_info[1] != 0:
-            self._frontend_cache["SWAP_PERCENT"] = str(round(swap_info[0]/swap_info[1] * 100, 2)) + "%"
+            self._frontend_cache["SWAP_PERCENT"] = str(round(swap_info[0] / swap_info[1] * 100, 2)) + "%"
         else:
             self._frontend_cache["SWAP_PERCENT"] = "0.00%"

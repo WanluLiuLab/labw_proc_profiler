@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 import gc
 import logging
+import signal
 import threading
 import time
 from abc import abstractmethod
-from typing import Dict, Any, Iterable
+from typing import Dict, Any, List, Union, Set
 
-from pid_monitor import DEFAULT_REFRESH_INTERVAL
+from pid_monitor import DEFAULT_SYSTEM_INDICATOR_PID
 from pid_monitor.dt_mvc.tracer_loader import get_tracer_class
 
 
@@ -16,13 +19,13 @@ class BaseTracerDispatcherThread(threading.Thread):
     basename: str
     """The report basename."""
 
-    dispatchee: str
-    """What is being traced? PID for process, ``sys`` for system"""
+    dispatchee: int
+    """What is being traced? PID for process, DEFAULT_SYSTEM_INDICATOR_PID for system"""
 
     thread_pool: Dict[str, threading.Thread]
     """The tracer Thread, is name -> thread"""
 
-    loaded_tracers: Iterable[str]
+    tracers_to_load: List[str]
     """List[str] of loaded tracers."""
 
     tracer_kwargs: Dict[str, Any]
@@ -34,28 +37,36 @@ class BaseTracerDispatcherThread(threading.Thread):
     should_exit: bool
     """Interval of tracing in seconds."""
 
+    dispatcher_controller: DispatcherController
+
     def __init__(
             self,
-            dispatchee: str,
+            dispatchee: int,
             basename: str,
-            interval: float = DEFAULT_REFRESH_INTERVAL
+            interval: float,
+            dispatcher_controller: DispatcherController
     ):
         super().__init__()
         self.log_handler = logging.getLogger()
         self.basename = basename
         self.dispatchee = dispatchee
         self.thread_pool = {}
-        self.loaded_tracers = []
-        self.tracer_kwargs = {"basename": self.basename}
+        self.tracers_to_load = []
         self.interval = interval
+        self.tracer_kwargs = {
+            "basename": self.basename,
+            "interval": self.interval
+        }
         self.should_exit = False
+        dispatcher_controller.register_dispatcher(self.dispatchee, self)
+        self.dispatcher_controller = dispatcher_controller
 
     def append_threadpool(self, thread: threading.Thread):
         self.thread_pool[thread.__class__.__name__] = thread
 
     def start_tracers(self):
         """Start loaded tracers. Should be called at the end of :py:func:`init`."""
-        for tracer in self.loaded_tracers:
+        for tracer in self.tracers_to_load:
             try:
                 self.log_handler.info(f"DISPATCHEE={self.dispatchee}: Fetch TRACER={tracer}")
                 new_thread = get_tracer_class(tracer)(**self.tracer_kwargs)
@@ -107,6 +118,7 @@ class BaseTracerDispatcherThread(threading.Thread):
         """
         self.log_handler.info(f"Dispatcher for DISPATCHEE={self.dispatchee} SIGTERM")
         self.before_ending()
+        self.dispatcher_controller.remove_dispatcher(self.dispatchee)
         for thread in self.thread_pool.values():
             try:
                 thread.should_exit = True
@@ -131,3 +143,50 @@ class BaseTracerDispatcherThread(threading.Thread):
 
     def __str__(self):
         return repr(self)
+
+
+class DispatcherController:
+    dispatchers: Dict[int, BaseTracerDispatcherThread]
+    """Dict[pid, Dispatcher] for all active dispatchers"""
+
+    all_pids: Set[int]
+
+    def __init__(self):
+        self.dispatchers = {}
+        self.all_pids = set()
+
+    def terminate_all_dispatchers(self, _signal: Union[signal.signal, int] = signal.SIGTERM, *_args):
+        """
+        Send signal to all dispatchers.
+        """
+        for val in self.dispatchers.values():
+            try:
+                val.should_exit = True
+            except AttributeError:
+                del val
+        time.sleep(2)
+        self.dispatchers.clear()
+        gc.collect()
+
+    def get_current_active_pids(self):
+        return self.dispatchers.keys()
+
+    def register_dispatcher(self, pid: int, dispatcher: BaseTracerDispatcherThread):
+        self.dispatchers[pid] = dispatcher
+        self.all_pids.add(pid)
+
+    def collect_all_process_info(self) -> Dict[int, Dict[str, str]]:
+        retd = {}
+        for d_pid, d_val in self.dispatchers.items():
+            if d_pid != DEFAULT_SYSTEM_INDICATOR_PID:
+                retd[d_pid] = d_val.collect_information()
+        return retd
+
+    def collect_system_info(self) -> Dict[str, str]:
+        return self.dispatchers[DEFAULT_SYSTEM_INDICATOR_PID].collect_information()
+
+    def remove_dispatcher(self, pid: int):
+        try:
+            self.dispatchers.pop(pid)
+        except KeyError:
+            pass

@@ -37,12 +37,12 @@ class _PidMonitorProcess(threading.Thread):
         self.output_basename = output_basename
 
     def run(self):
-        main_func.trace_pid(self.monitored_pid, os.path.abspath(
-            os.path.expanduser(
-                os.path.join(
-                    self.output_basename, "proc_profiler", "")
-            )
-        ))
+        main_func.trace_pid(
+            toplevel_trace_pid=self.monitored_pid,
+            report_basename=os.path.abspath(os.path.expanduser(os.path.join(
+                self.output_basename, "proc_profiler", ""
+            )))
+        )
 
 
 def run_process(args: List[str], output_basename: str) -> int:
@@ -62,7 +62,10 @@ def run_process(args: List[str], output_basename: str) -> int:
     except FileNotFoundError:
         print("Command not found!")
         return 127
-    pid_monitor_process = _PidMonitorProcess(pid=_MONITORED_PROCESS.pid, output_basename=output_basename)
+    pid_monitor_process = _PidMonitorProcess(
+        pid=_MONITORED_PROCESS.pid,
+        output_basename=output_basename
+    )
     pid_monitor_process.start()
     exit_value = _MONITORED_PROCESS.wait()
     pid_monitor_process.join()

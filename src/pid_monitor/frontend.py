@@ -4,8 +4,7 @@ from time import sleep
 
 from prettytable import PrettyTable
 
-from pid_monitor import DEFAULT_REFRESH_INTERVAL
-from pid_monitor.dt_mvc import dispatcher_controller
+from pid_monitor.dt_mvc.base_dispatcher_class import DispatcherController
 
 _LOGGER_HANDLER = getLogger(__name__)
 
@@ -22,27 +21,7 @@ _PROCESS_TABLE_COL_NAMES = (
 )
 
 
-def _to_human_readable(num: int, base: int = 1024) -> str:
-    """
-    Make an integer to 1000- or 1024-based human-readable form.
-    """
-    if base == 1024:
-        dc_list = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB']
-    elif base == 1000:
-        dc_list = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']
-    else:
-        raise ValueError("base should be 1000 or 1024")
-    step = 0
-    dc = dc_list[step]
-    while num > base and step < len(dc_list) - 1:
-        step = step + 1
-        num /= base
-        dc = dc_list[step]
-    num = round(num, 2)
-    return str(num) + dc
-
-
-def _print_frontend_system_tracer():
+def _print_frontend_system_tracer(dispatcher_controller: DispatcherController):
     """
     Print frontend system tracer information.
     """
@@ -58,7 +37,10 @@ def _print_frontend_system_tracer():
     )
 
 
-def _print_frontend_process_tracer(process_table: PrettyTable):
+def _print_frontend_process_tracer(
+        process_table: PrettyTable,
+        dispatcher_controller: DispatcherController
+):
     all_info = dispatcher_controller.collect_all_process_info()
     for pid_val in all_info.values():
         row = [pid_val[name] for name in _PROCESS_TABLE_COL_NAMES]
@@ -68,13 +50,17 @@ def _print_frontend_process_tracer(process_table: PrettyTable):
 
 
 def show_frontend(
-        interval: float = DEFAULT_REFRESH_INTERVAL
+        interval: float,
+        dispatcher_controller: DispatcherController
 ):
     """Show the frontend."""
     process_table = PrettyTable(_PROCESS_TABLE_COL_NAMES)
     while len(dispatcher_controller.get_current_active_pids()) > 1:
         subprocess.call('clear')
-        _print_frontend_system_tracer()
-        _print_frontend_process_tracer(process_table)
+        _print_frontend_system_tracer(dispatcher_controller=dispatcher_controller)
+        _print_frontend_process_tracer(
+            process_table=process_table,
+            dispatcher_controller=dispatcher_controller
+        )
         sleep(interval * 100)
     _LOGGER_HANDLER.info("Toplevel PID finished")

@@ -30,7 +30,6 @@ import time
 
 import psutil
 
-_ALL_PIDS = set()
 logging.basicConfig(
     level=logging.DEBUG,
     filename="tracer.log",
@@ -43,6 +42,21 @@ PSUTIL_NOTFOUND_ERRORS = (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.Acc
 DEFAULT_REFRESH_INTERVAL = 0.01
 
 DEFAULT_SYSTEM_INDICATOR_PID = -1
+
+DEFAULT_PROCESS_LEVEL_TRACERS = [
+    "ProcessIOTracerThread",
+    "ProcessFDTracerThread",
+    "ProcessMEMTracerThread",
+    "ProcessChildTracerThread",
+    "ProcessCPUTracerThread",
+    "ProcessSTATTracerThread",
+    "ProcessSyscallTracerThread"
+]
+DEFAULT_SYSTEM_LEVEL_TRACERS = [
+    "SystemMEMTracerThread",
+    "SystemCPUTracerThread",
+    "SystemSWAPTracerThread"
+]
 
 
 def get_total_cpu_time(_p: psutil.Process) -> float:
@@ -63,3 +77,23 @@ def get_timestamp() -> str:
     """
     time_in_ms = time.time() * 100
     return time.strftime(f'%Y-%m-%d %H:%M:%S.{int(time_in_ms % 100)}', time.localtime(time_in_ms / 100.0))
+
+
+def to_human_readable(num: int, base: int = 1024) -> str:
+    """
+    Make an integer to 1000- or 1024-based human-readable form.
+    """
+    if base == 1024:
+        dc_list = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB']
+    elif base == 1000:
+        dc_list = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB']
+    else:
+        raise ValueError("base should be 1000 or 1024")
+    step = 0
+    dc = dc_list[step]
+    while num > base and step < len(dc_list) - 1:
+        step = step + 1
+        num /= base
+        dc = dc_list[step]
+    num = round(num, 2)
+    return str(num) + dc

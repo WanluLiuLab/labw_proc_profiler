@@ -14,10 +14,10 @@ class SystemMEMTracerThread(BaseSystemTracerThread):
 
     See documents in folder R/system_report.Rmd for more details about, e.g., what CACHED is.
     """
-    _cached_vm_avail:int
-    _cached_vm_total:int
-    _cached_vm_buffered:int
-    _cached_vm_shared:int
+    _cached_vm_avail: int
+    _cached_vm_total: int
+    _cached_vm_buffered: int
+    _cached_vm_shared: int
 
     def __init__(self, **kwargs):
         super().__init__(tracer_type="mem", **kwargs)

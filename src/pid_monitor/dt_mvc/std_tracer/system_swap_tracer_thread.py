@@ -12,8 +12,8 @@ class SystemSWAPTracerThread(BaseSystemTracerThread):
     """
     System-level SWAP utilization tracer.utilization tracer.utilization tracer.utilization tracer.
     """
-    _cached_swap_total:int
-    _cached_swap_used:int
+    _cached_swap_total: int
+    _cached_swap_used: int
 
     def __init__(self, **kwargs):
         super().__init__(tracer_type="swap", **kwargs)
