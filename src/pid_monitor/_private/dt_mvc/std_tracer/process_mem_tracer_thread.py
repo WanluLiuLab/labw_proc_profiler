@@ -1,6 +1,5 @@
 from typing import TextIO
 
-from pid_monitor._private import get_timestamp
 from pid_monitor._private.dt_mvc.base_tracer_class import BaseProcessTracerThread
 
 __all__ = ("ProcessMEMTracerThread",)
@@ -29,7 +28,7 @@ class ProcessMEMTracerThread(BaseProcessTracerThread):
         x = self.process.memory_full_info()
         self._cached_resident_mem = x.rss
         writer.write('\t'.join((
-            get_timestamp(),
+            self.get_timestamp(),
             str(x.vms),
             str(self._cached_resident_mem),
             str(x.shared),

@@ -1,6 +1,5 @@
 from typing import TextIO
 
-from pid_monitor._private import get_timestamp
 from pid_monitor._private.dt_mvc.base_tracer_class import BaseProcessTracerThread
 
 __all__ = ("ProcessIOTracerThread",)
@@ -33,7 +32,7 @@ class ProcessIOTracerThread(BaseProcessTracerThread):
         curr_tr = io_info.read_chars
         curr_tw = io_info.write_chars
         writer.write('\t'.join([
-            get_timestamp(),
+            self.get_timestamp(),
             str(curr_dr),
             str(curr_dw),
             str(curr_tr),

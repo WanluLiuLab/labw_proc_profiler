@@ -8,7 +8,7 @@ import time
 from abc import abstractmethod
 from typing import Dict, Any, List, Union, Set
 
-from pid_monitor._private import DEFAULT_SYSTEM_INDICATOR_PID
+from pid_monitor._private import DEFAULT_SYSTEM_INDICATOR_PID, get_timestamp
 from pid_monitor._private.dt_mvc.tracer_loader import get_tracer_class
 
 
@@ -45,6 +45,7 @@ class BaseTracerDispatcherThread(threading.Thread):
             output_basename: str,
             tracers_to_load: tracers_to_load,
             interval: float,
+            resolution: float,
             dispatcher_controller: DispatcherController
     ):
         super().__init__()
@@ -54,13 +55,21 @@ class BaseTracerDispatcherThread(threading.Thread):
         self.thread_pool = {}
         self.tracers_to_load = tracers_to_load
         self.interval = interval
+        self.resolution = resolution
         self.tracer_kwargs = {
             "output_basename": self.output_basename,
-            "interval": self.interval
+            "interval": self.interval,
+            "resolution": self.resolution
         }
         self.should_exit = False
         dispatcher_controller.register_dispatcher(self.trace_pid, self)
         self.dispatcher_controller = dispatcher_controller
+
+    def get_timestamp(self) -> str:
+        """
+        Get timestamp in an accuracy of 0.01 seconds.
+        """
+        return get_timestamp(self.resolution)
 
     def append_threadpool(self, thread: threading.Thread):
         self.thread_pool[thread.__class__.__name__] = thread
@@ -74,7 +83,9 @@ class BaseTracerDispatcherThread(threading.Thread):
                 self.log_handler.info(f"trace_pid={self.trace_pid}: Fetch TRACER={tracer} SUCCESS")
             except Exception as e:
                 self.log_handler.error(
-                    f"trace_pid={self.trace_pid}: Fetch TRACER={tracer} {e.__class__.__name__} encountered!"
+                    f"trace_pid={self.trace_pid}: "
+                    f"Fetch TRACER={tracer} {e.__class__.__name__} encountered! "
+                    f"DETAILS={e.__repr__()}"
                 )
                 continue
             new_thread.start()

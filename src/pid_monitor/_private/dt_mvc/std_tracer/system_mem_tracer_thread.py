@@ -2,7 +2,6 @@ from typing import TextIO, Tuple
 
 import psutil
 
-from pid_monitor._private import get_timestamp
 from pid_monitor._private.dt_mvc.base_tracer_class import BaseSystemTracerThread
 
 __all__ = ("SystemMEMTracerThread",)
@@ -51,7 +50,7 @@ class SystemMEMTracerThread(BaseSystemTracerThread):
         self._cached_vm_buffered = x.buffers
         self._cached_vm_shared = x.shared
         writer.write('\t'.join((
-            get_timestamp(),
+            self.get_timestamp(),
             str(self._cached_vm_total),
             str(x.total - self._cached_vm_avail),
             str(self._cached_vm_buffered),

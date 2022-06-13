@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from abc import abstractmethod
 from time import sleep
 from typing import Tuple, List, Any, TextIO
@@ -9,7 +10,14 @@ import docker
 from docker.errors import APIError, NotFound
 from docker.models.containers import Container
 
-from pid_monitor._private import get_timestamp
+
+def get_timestamp() -> str:
+    """
+    Get timestamp in an accuracy of 0.01 seconds.
+    """
+    time_in_ms = time.time() * 100
+    return time.strftime(f'%Y-%m-%d %H:%M:%S.{int(time_in_ms % 100)}', time.localtime(time_in_ms / 100.0))
+
 
 client = docker.from_env()
 
@@ -115,7 +123,7 @@ class DockerStatsTracerThread(DockerBaseWriterTracerThread):
         pids = self.parse_pid(stat)
         writer.write(
             "\t".join((
-                get_timestamp(),
+                self.get_timestamp(),
                 str(round(cpuinfo[0] * 100, 2)),
                 str(cpuinfo[1]),
                 str(meminfo[0]),
@@ -142,7 +150,7 @@ class DockerTopTracerThread(DockerBaseWriterTracerThread):
         )
 
     def print_body(self, writer: TextIO):
-        timestamp = get_timestamp()
+        timestamp = self.get_timestamp()
         top = self.traced_container.top()
         for process in top.get('Processes', []):
             writer.write(

@@ -23,6 +23,7 @@
       <excludeFolder url="file://$MODULE_DIR$/build" />
       <excludeFolder url="file://$MODULE_DIR$/src/proc_profiler/proc_profiler_test" />
       <excludeFolder url="file://$MODULE_DIR$/fio_data" />
+      <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_test" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

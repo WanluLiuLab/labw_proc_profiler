@@ -6,7 +6,7 @@ import sys
 from typing import List
 
 from pid_monitor._private import PSUTIL_NOTFOUND_ERRORS, DEFAULT_PROCESS_LEVEL_TRACERS, DEFAULT_SYSTEM_LEVEL_TRACERS, \
-    DEFAULT_REFRESH_INTERVAL
+    DEFAULT_REFRESH_INTERVAL, DEFAULT_RESOLUTION
 from pid_monitor._private.dt_mvc.base_dispatcher_class import DispatcherController
 from pid_monitor._private.dt_mvc.std_dispatcher import SystemTracerDispatcherThread, ProcessTracerDispatcherThread
 from pid_monitor._private.frontend import show_frontend
@@ -29,8 +29,9 @@ def _initialize_registry(output_basename: str):
 
 def _start_system_tracer_dispatcher(
         output_basename: str,
-        system_level_tracers: List[str],
+        tracers_to_load: List[str],
         interval: float,
+        resolution: float,
         dispatcher_controller: DispatcherController
 ) -> SystemTracerDispatcherThread:
     """
@@ -38,9 +39,10 @@ def _start_system_tracer_dispatcher(
     """
     system_dispatcher_process = SystemTracerDispatcherThread(
         basename=output_basename,
-        tracers_to_load=system_level_tracers,
+        tracers_to_load=tracers_to_load,
         interval=interval,
-        dispatcher_controller=dispatcher_controller
+        dispatcher_controller=dispatcher_controller,
+        resolution=resolution
     )
     system_dispatcher_process.start()
     _LOG_HANDLER.debug("System dispatcher started")
@@ -48,28 +50,35 @@ def _start_system_tracer_dispatcher(
 
 
 def _start_main_tracer_dispatcher(
-        toplevel_trace_pid: int,
+        trace_pid: int,
         output_basename: str,
-        process_level_tracers: List[str],
+        tracers_to_load: List[str],
         interval: float,
+        resolution: float,
         dispatcher_controller: DispatcherController
 ) -> ProcessTracerDispatcherThread:
     """
     Start the main dispatcher over traced process. If failed, suicide.
     """
     try:
-        main_dispatcher = ProcessTracerDispatcherThread(trace_pid=toplevel_trace_pid, output_basename=output_basename,
-                                                        tracers_to_load=process_level_tracers, interval=interval,
-                                                        dispatcher_controller=dispatcher_controller)
+        main_dispatcher = ProcessTracerDispatcherThread(
+            trace_pid=trace_pid,
+            output_basename=output_basename,
+            tracers_to_load=tracers_to_load,
+            interval=interval,
+            resolution=resolution,
+            dispatcher_controller=dispatcher_controller
+        )
     except PSUTIL_NOTFOUND_ERRORS:
-        _LOG_HANDLER.error(f"Process pid={toplevel_trace_pid} not found -- Maybe it is terminated?")
+        _LOG_HANDLER.error(f"Process pid={trace_pid} not found -- Maybe it is terminated?")
         os.kill(os.getpid(), signal.SIGKILL)
         sys.exit(0)
     main_dispatcher.start()
     _LOG_HANDLER.debug("Main dispatcher started")
     return main_dispatcher
 
-def _parse_args(args:List[str]) -> argparse.Namespace:
+
+def _parse_args(args: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-p", "--pid",
@@ -116,12 +125,14 @@ def _parse_args(args:List[str]) -> argparse.Namespace:
     )
     return parser.parse_args(args)
 
+
 def trace_pid(
         toplevel_trace_pid: int,
         output_basename: str,
         process_level_tracers: List[str] = DEFAULT_PROCESS_LEVEL_TRACERS,
         system_level_tracers: List[str] = DEFAULT_SYSTEM_LEVEL_TRACERS,
         interval: float = DEFAULT_REFRESH_INTERVAL,
+        resolution: float = DEFAULT_RESOLUTION,
         make_report: bool = True
 ) -> int:
     """
@@ -153,15 +164,17 @@ def trace_pid(
     _initialize_registry(output_basename)
     system_tracer_dispatcher = _start_system_tracer_dispatcher(
         output_basename=output_basename,
-        system_level_tracers=system_level_tracers,
+        tracers_to_load=system_level_tracers,
         interval=interval,
+        resolution=resolution,
         dispatcher_controller=dispatcher_controller
     )
     main_tracer_dispatcher = _start_main_tracer_dispatcher(
-        toplevel_trace_pid=toplevel_trace_pid,
+        trace_pid=toplevel_trace_pid,
         output_basename=output_basename,
-        process_level_tracers=process_level_tracers,
+        tracers_to_load=process_level_tracers,
         interval=interval,
+        resolution=resolution,
         dispatcher_controller=dispatcher_controller
     )
     show_frontend(
@@ -178,14 +191,14 @@ def trace_pid(
 
     # Make report
     if make_report:
-        print(list(dispatcher_controller.all_pids))
         make_all_report(dispatcher_controller.all_pids, output_basename)
     return 0
 
-def main(args:List[str]):
-    args=_parse_args(args)
-    trace_pid_kwargs={
-        "toplevel_trace_pid":args.pid
+
+def main(args: List[str]):
+    args = _parse_args(args)
+    trace_pid_kwargs = {
+        "toplevel_trace_pid": args.pid
     }
     if args.out is None:
         os.makedirs(f"pid_monitor_{args.pid}", exist_ok=True)

@@ -4,7 +4,6 @@ import shutil
 import subprocess
 from typing import TextIO, Tuple
 
-from pid_monitor._private import get_timestamp
 from pid_monitor._private.dt_mvc.base_tracer_class import BaseProcessTracerThread
 
 PLINE_ERR_REGEX = re.compile(r"^ = -1 (.+) \(.+\)$")
@@ -90,7 +89,7 @@ class ProcessSyscallTracerThread(BaseProcessTracerThread):
                 self.print_header(syscall_writer, type="ERR")
                 while not self.should_exit:
                     pline = proc.stderr.readline()
-                    timestamp = get_timestamp()
+                    timestamp = self.get_timestamp()
                     if not pline:
                         break
                     pline = str(pline, encoding="utf-8")

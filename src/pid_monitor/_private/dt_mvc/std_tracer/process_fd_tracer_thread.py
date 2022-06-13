@@ -2,7 +2,6 @@ import glob
 import os
 from typing import TextIO, Optional, Dict
 
-from pid_monitor._private import get_timestamp
 from pid_monitor._private.dt_mvc.base_tracer_class import BaseProcessTracerThread
 
 __all__ = ("ProcessFDTracerThread",)
@@ -47,7 +46,7 @@ class ProcessFDTracerThread(BaseProcessTracerThread):
             return
         for key, value in fd.items():
             writer.write('\t'.join((
-                get_timestamp(),
+                self.get_timestamp(),
                 str(key),
                 value
             )) + '\n')

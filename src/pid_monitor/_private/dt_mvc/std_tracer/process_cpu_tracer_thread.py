@@ -1,6 +1,5 @@
 from typing import TextIO
 
-from pid_monitor._private import get_timestamp
 from pid_monitor._private.dt_mvc.base_tracer_class import BaseProcessTracerThread
 
 __all__ = ("ProcessCPUTracerThread",)
@@ -29,7 +28,7 @@ class ProcessCPUTracerThread(BaseProcessTracerThread):
         self._cached_on_cpu = self.process.cpu_num()
         self._cached_cpu_percent = self.process.cpu_percent(interval=1)
         writer.write('\t'.join((
-            get_timestamp(),
+            self.get_timestamp(),
             str(self._cached_on_cpu),
             str(self._cached_cpu_percent)
         )) + '\n')

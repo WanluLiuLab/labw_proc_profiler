@@ -6,7 +6,7 @@ from typing import Dict, List
 import psutil
 
 from pid_monitor._private import PSUTIL_NOTFOUND_ERRORS, DEFAULT_SYSTEM_INDICATOR_PID, get_total_cpu_time, \
-    get_timestamp, to_human_readable
+    to_human_readable
 from pid_monitor._private.dt_mvc.base_dispatcher_class import BaseTracerDispatcherThread, DispatcherController
 
 _REG_MUTEX = threading.Lock()
@@ -37,6 +37,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
             output_basename: str,
             tracers_to_load: List[str],
             interval: float,
+            resolution: float,
             dispatcher_controller: DispatcherController
     ):
         """
@@ -54,6 +55,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
             output_basename=output_basename,
             tracers_to_load=tracers_to_load,
             interval=interval,
+            resolution=resolution,
             dispatcher_controller=dispatcher_controller
         )
 
@@ -68,7 +70,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         self._write_env()
         self._write_mapfile()
 
-        self.tracer_kwargs["trace_pid"] = trace_pid
+        self.tracer_kwargs["trace_pid"] = self.trace_pid
         self.start_tracers()
 
     def run_body(self):
@@ -102,7 +104,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
             with _REG_MUTEX:
                 with open(f"{self.output_basename}.reg.tsv", mode='a') as writer:
                     writer.write('\t'.join((
-                        get_timestamp(),
+                        self.get_timestamp(),
                         str(self.trace_pid),
                         " ".join(self.process.cmdline()),
                         self.process.exe(),
@@ -161,7 +163,8 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
                         output_basename=self.output_basename,
                         tracers_to_load=self.tracers_to_load,
                         interval=self.interval,
-                        dispatcher_controller=self.dispatcher_controller
+                        dispatcher_controller=self.dispatcher_controller,
+                        resolution=self.resolution
                     )
                     new_thread.start()
                     self.append_threadpool(new_thread)
@@ -265,6 +268,7 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
             basename: str,
             tracers_to_load: List[str],
             interval: float,
+            resolution: float,
             dispatcher_controller: DispatcherController
     ):
         super().__init__(
@@ -272,6 +276,7 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
             output_basename=basename,
             tracers_to_load=tracers_to_load,
             interval=interval,
+            resolution=resolution,
             dispatcher_controller=dispatcher_controller
         )
         self._setup_cache()

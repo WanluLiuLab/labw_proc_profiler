@@ -1,6 +1,5 @@
 from typing import TextIO, Tuple
 
-from pid_monitor._private import get_timestamp
 from pid_monitor._private.dt_mvc.base_tracer_class import BaseProcessTracerThread
 
 __all__ = ("ProcessChildTracerThread",)
@@ -26,7 +25,7 @@ class ProcessChildTracerThread(BaseProcessTracerThread):
         self._cached_child_process_number = len(self.process.children())
         self._cached_thread_number = self.process.num_threads()
         writer.write('\t'.join((
-            get_timestamp(),
+            self.get_timestamp(),
             str(self._cached_child_process_number),
             str(self._cached_thread_number)
         )) + '\n')
