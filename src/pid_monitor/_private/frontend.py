@@ -4,7 +4,7 @@ from time import sleep
 
 from prettytable import PrettyTable
 
-from pid_monitor.dt_mvc.base_dispatcher_class import DispatcherController
+from pid_monitor._private.dt_mvc.base_dispatcher_class import DispatcherController
 
 _LOGGER_HANDLER = getLogger(__name__)
 
@@ -62,5 +62,5 @@ def show_frontend(
             process_table=process_table,
             dispatcher_controller=dispatcher_controller
         )
-        sleep(interval * 100)
+        sleep(1)
     _LOGGER_HANDLER.info("Toplevel PID finished")

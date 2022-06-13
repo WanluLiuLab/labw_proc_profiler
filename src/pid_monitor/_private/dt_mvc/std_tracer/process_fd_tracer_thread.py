@@ -2,8 +2,8 @@ import glob
 import os
 from typing import TextIO, Optional, Dict
 
-from pid_monitor import get_timestamp
-from pid_monitor.dt_mvc.base_tracer_class import BaseProcessTracerThread
+from pid_monitor._private import get_timestamp
+from pid_monitor._private.dt_mvc.base_tracer_class import BaseProcessTracerThread
 
 __all__ = ("ProcessFDTracerThread",)
 

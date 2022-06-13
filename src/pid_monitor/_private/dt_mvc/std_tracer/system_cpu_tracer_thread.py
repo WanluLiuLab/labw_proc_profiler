@@ -2,8 +2,8 @@ from typing import TextIO, List
 
 import psutil
 
-from pid_monitor import get_timestamp
-from pid_monitor.dt_mvc.base_tracer_class import BaseSystemTracerThread
+from pid_monitor._private import get_timestamp
+from pid_monitor._private.dt_mvc.base_tracer_class import BaseSystemTracerThread
 
 __all__ = ("SystemCPUTracerThread",)
 

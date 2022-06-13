@@ -6,7 +6,7 @@ from typing import TextIO
 
 import psutil
 
-from pid_monitor import PSUTIL_NOTFOUND_ERRORS, DEFAULT_SYSTEM_INDICATOR_PID
+from pid_monitor._private import PSUTIL_NOTFOUND_ERRORS, DEFAULT_SYSTEM_INDICATOR_PID
 
 
 class BaseTracerThread(threading.Thread):

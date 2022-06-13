@@ -1,6 +1,6 @@
 import shutil
 
-from proc_profiler import run_process
+from pid_monitor.main.trace_cmd import run_process
 
 if __name__ == "__main__":
     try:

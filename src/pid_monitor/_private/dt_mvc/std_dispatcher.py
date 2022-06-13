@@ -5,9 +5,9 @@ from typing import Dict, List
 
 import psutil
 
-from pid_monitor import PSUTIL_NOTFOUND_ERRORS, DEFAULT_SYSTEM_INDICATOR_PID, to_human_readable
-from pid_monitor import get_timestamp, get_total_cpu_time
-from pid_monitor.dt_mvc.base_dispatcher_class import BaseTracerDispatcherThread, DispatcherController
+from pid_monitor._private import PSUTIL_NOTFOUND_ERRORS, DEFAULT_SYSTEM_INDICATOR_PID, get_total_cpu_time, \
+    get_timestamp, to_human_readable
+from pid_monitor._private.dt_mvc.base_dispatcher_class import BaseTracerDispatcherThread, DispatcherController
 
 _REG_MUTEX = threading.Lock()
 """Mutex for writing registries"""
@@ -209,22 +209,25 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         self._frontend_cache["CPU_TIME"] = str(
             round(self._cached_last_cpu_time, 2)
         )
-        self._frontend_cache["CPU%"] = str(
-            self.thread_pool["ProcessCPUTracerThread"].get_cached_cpu_percent()
-        )
-        self._frontend_cache["RESIDENT_MEM"] = to_human_readable(
-            self.thread_pool["ProcessMEMTracerThread"].get_cached_resident_mem()
-        )
-        thread_child_process_num = \
-            self.thread_pool["ProcessChildTracerThread"].get_cached_thread_child_process_num()
-
-        self._frontend_cache["NUM_THREADS"] = str(
-            thread_child_process_num[0]
-        )
-        self._frontend_cache["NUM_CHILD_PROCESS"] = str(
-            thread_child_process_num[1]
-        )
-        self._frontend_cache["STAT"] = self.thread_pool["ProcessSTATTracerThread"].get_cached_stat()
+        if "ProcessCPUTracerThread" in self.thread_pool:
+            self._frontend_cache["CPU%"] = str(
+                self.thread_pool["ProcessCPUTracerThread"].get_cached_cpu_percent()
+            )
+        if "ProcessMEMTracerThread" in self.thread_pool:
+            self._frontend_cache["RESIDENT_MEM"] = to_human_readable(
+                self.thread_pool["ProcessMEMTracerThread"].get_cached_resident_mem()
+            )
+        if "ProcessChildTracerThread" in self.thread_pool:
+            thread_child_process_num = \
+                self.thread_pool["ProcessChildTracerThread"].get_cached_thread_child_process_num()
+            self._frontend_cache["NUM_THREADS"] = str(
+                thread_child_process_num[0]
+            )
+            self._frontend_cache["NUM_CHILD_PROCESS"] = str(
+                thread_child_process_num[1]
+            )
+        if "STAT" in self.thread_pool:
+            self._frontend_cache["STAT"] = self.thread_pool["ProcessSTATTracerThread"].get_cached_stat()
 
 
 class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
@@ -305,22 +308,25 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
                 )) + '\n')
 
     def _update_cache(self):
-        self._frontend_cache["CPU%"] = str(round(
-            statistics.mean(self.thread_pool["SystemCPUTracerThread"].get_cached_cpu_percent()), 2
-        )) + "%"
-        mem_info = self.thread_pool["SystemMEMTracerThread"].get_cached_vm_info()
-        self._frontend_cache["VM_AVAIL"] = to_human_readable(mem_info[0])
-        self._frontend_cache["VM_TOTAL"] = to_human_readable(mem_info[1])
-        if mem_info[1] != 0:
-            self._frontend_cache["VM_PERCENT"] = str(round(mem_info[0] / mem_info[1] * 100, 2)) + "%"
-        else:
-            self._frontend_cache["VM_PERCENT"] = "0.00%"
-        self._frontend_cache["BUFFERED"] = to_human_readable(mem_info[2])
-        self._frontend_cache["SHARED"] = to_human_readable(mem_info[3])
-        swap_info = self.thread_pool["SystemSWAPTracerThread"].get_cached_swap_info()
-        self._frontend_cache["SWAP_AVAIL"] = to_human_readable(swap_info[0])
-        self._frontend_cache["SWAP_TOTAL"] = to_human_readable(swap_info[1])
-        if swap_info[1] != 0:
-            self._frontend_cache["SWAP_PERCENT"] = str(round(swap_info[0] / swap_info[1] * 100, 2)) + "%"
-        else:
-            self._frontend_cache["SWAP_PERCENT"] = "0.00%"
+        if "SystemCPUTracerThread" in self.thread_pool:
+            self._frontend_cache["CPU%"] = str(round(
+                statistics.mean(self.thread_pool["SystemCPUTracerThread"].get_cached_cpu_percent()), 2
+            )) + "%"
+        if "SystemMEMTracerThread" in self.thread_pool:
+            mem_info = self.thread_pool["SystemMEMTracerThread"].get_cached_vm_info()
+            self._frontend_cache["VM_AVAIL"] = to_human_readable(mem_info[0])
+            self._frontend_cache["VM_TOTAL"] = to_human_readable(mem_info[1])
+            if mem_info[1] != 0:
+                self._frontend_cache["VM_PERCENT"] = str(round(mem_info[0] / mem_info[1] * 100, 2)) + "%"
+            else:
+                self._frontend_cache["VM_PERCENT"] = "0.00%"
+            self._frontend_cache["BUFFERED"] = to_human_readable(mem_info[2])
+            self._frontend_cache["SHARED"] = to_human_readable(mem_info[3])
+        if "SystemSWAPTracerThread" in self.thread_pool:
+            swap_info = self.thread_pool["SystemSWAPTracerThread"].get_cached_swap_info()
+            self._frontend_cache["SWAP_AVAIL"] = to_human_readable(swap_info[0])
+            self._frontend_cache["SWAP_TOTAL"] = to_human_readable(swap_info[1])
+            if swap_info[1] != 0:
+                self._frontend_cache["SWAP_PERCENT"] = str(round(swap_info[0] / swap_info[1] * 100, 2)) + "%"
+            else:
+                self._frontend_cache["SWAP_PERCENT"] = "0.00%"

@@ -8,8 +8,8 @@ import time
 from abc import abstractmethod
 from typing import Dict, Any, List, Union, Set
 
-from pid_monitor import DEFAULT_SYSTEM_INDICATOR_PID
-from pid_monitor.dt_mvc.tracer_loader import get_tracer_class
+from pid_monitor._private import DEFAULT_SYSTEM_INDICATOR_PID
+from pid_monitor._private.dt_mvc.tracer_loader import get_tracer_class
 
 
 class BaseTracerDispatcherThread(threading.Thread):

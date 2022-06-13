@@ -8,6 +8,7 @@
 __pycache__/
 /activate.sh
 proc_profiler_*/
+pid_monitor_*/
 /pytest.log
 tracer.log
 /COPYING

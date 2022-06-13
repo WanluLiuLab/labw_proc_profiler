@@ -2,8 +2,8 @@ import importlib
 from typing import Iterator, Tuple
 
 POSSIBLE_TRACER_PATHS = (
-    "pid_monitor.dt_mvc.std_tracer",
-    "pid_monitor.dt_mvc.additional_tracer"
+    "pid_monitor._private.dt_mvc.std_tracer",
+    "pid_monitor._private.dt_mvc.additional_tracer"
 )
 
 

@@ -8,7 +8,7 @@ import subprocess
 import threading
 from typing import Set
 
-from pid_monitor import parallel_helper, DEFAULT_SYSTEM_INDICATOR_PID
+from pid_monitor._private import parallel_helper, DEFAULT_SYSTEM_INDICATOR_PID
 
 _LOG_HANDLER = logging.getLogger()
 """The Logger Handler"""
@@ -16,7 +16,7 @@ _LOG_HANDLER = logging.getLogger()
 _FILE_DIR = os.path.dirname(__file__)
 """Current directory, used for calling R processes"""
 
-_R_FILE_DIR = os.path.join(_FILE_DIR, 'R')
+_R_FILE_DIR = os.path.join(_FILE_DIR, '../R')
 """Current directory, used for calling R processes"""
 
 _RENV_CWD = os.path.dirname(os.path.dirname(_FILE_DIR))
@@ -34,7 +34,7 @@ class _MakeIndividualReportThread(threading.Thread):
         if self.this_pid == DEFAULT_SYSTEM_INDICATOR_PID:
             log_filename = f'{self.output_basename}_report_system.log'
         else:
-            log_filename = f'{self.output_basename}_report_{self.this_pid}_.log'
+            log_filename = f'{self.output_basename}_report_{self.this_pid}.log'
         log_writer = open(log_filename, "wt")
         if self.this_pid == DEFAULT_SYSTEM_INDICATOR_PID:
             report_process = subprocess.Popen((

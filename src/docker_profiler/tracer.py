@@ -9,7 +9,7 @@ import docker
 from docker.errors import APIError, NotFound
 from docker.models.containers import Container
 
-from pid_monitor import get_timestamp
+from pid_monitor._private import get_timestamp
 
 client = docker.from_env()
 

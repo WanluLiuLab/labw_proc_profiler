@@ -1,22 +1,18 @@
-"""
-This module contains main function of pid_monitor and can be used in other projects.
-"""
-
+import argparse
 import logging
 import os
 import signal
 import sys
 from typing import List
 
-from pid_monitor import PSUTIL_NOTFOUND_ERRORS, DEFAULT_PROCESS_LEVEL_TRACERS, DEFAULT_SYSTEM_LEVEL_TRACERS, \
+from pid_monitor._private import PSUTIL_NOTFOUND_ERRORS, DEFAULT_PROCESS_LEVEL_TRACERS, DEFAULT_SYSTEM_LEVEL_TRACERS, \
     DEFAULT_REFRESH_INTERVAL
-from pid_monitor.dt_mvc.base_dispatcher_class import DispatcherController
-from pid_monitor.dt_mvc.std_dispatcher import SystemTracerDispatcherThread, ProcessTracerDispatcherThread
-from pid_monitor.frontend import show_frontend
-from pid_monitor.report import make_all_report
+from pid_monitor._private.dt_mvc.base_dispatcher_class import DispatcherController
+from pid_monitor._private.dt_mvc.std_dispatcher import SystemTracerDispatcherThread, ProcessTracerDispatcherThread
+from pid_monitor._private.frontend import show_frontend
+from pid_monitor._private.report import make_all_report
 
 _LOG_HANDLER = logging.getLogger()
-"""The Logger Handler"""
 
 
 def _initialize_registry(output_basename: str):
@@ -73,6 +69,52 @@ def _start_main_tracer_dispatcher(
     _LOG_HANDLER.debug("Main dispatcher started")
     return main_dispatcher
 
+def _parse_args(args:List[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-p", "--pid",
+        help="PID to trace",
+        type=int,
+        required=True
+    )
+    parser.add_argument(
+        "-o", "--out",
+        help="Basename of output files",
+        type=str,
+        required=False,
+        default=None
+    )
+    parser.add_argument(
+        "--process_level_tracers",
+        help="Manually specify process_level_tracers",
+        type=str,
+        required=False,
+        nargs='*',
+        default=None
+    )
+    parser.add_argument(
+        "--system_level_tracers",
+        help="Manually specify system_level_tracers",
+        type=str,
+        required=False,
+        nargs='*',
+        default=None
+    )
+    parser.add_argument(
+        "--interval",
+        help="Manually specify interval",
+        type=float,
+        required=False,
+        default=None
+    )
+    parser.add_argument(
+        "--not_make_report",
+        help="Trace without making report",
+        required=False,
+        action="store_true",
+        default=False
+    )
+    return parser.parse_args(args)
 
 def trace_pid(
         toplevel_trace_pid: int,
@@ -139,3 +181,20 @@ def trace_pid(
         print(list(dispatcher_controller.all_pids))
         make_all_report(dispatcher_controller.all_pids, output_basename)
     return 0
+
+def main(args:List[str]):
+    args=_parse_args(args)
+    trace_pid_kwargs={
+        "toplevel_trace_pid":args.pid
+    }
+    if args.out is None:
+        os.makedirs(f"pid_monitor_{args.pid}", exist_ok=True)
+        trace_pid_kwargs["output_basename"] = os.path.join(f"pid_monitor_{args.pid}", "trace")
+    if args.process_level_tracers is not None:
+        trace_pid_kwargs["process_level_tracers"] = args.process_level_tracers
+    if args.system_level_tracers is not None:
+        trace_pid_kwargs["system_level_tracers"] = args.system_level_tracers
+    if args.interval is not None:
+        trace_pid_kwargs["interval"] = args.interval
+    trace_pid_kwargs["make_report"] = not args.not_make_report
+    return trace_pid(**trace_pid_kwargs)
