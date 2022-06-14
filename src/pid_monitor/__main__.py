@@ -17,7 +17,7 @@ See compiled Sphinx documentations for usage.
 """
 
 from pid_monitor import __version__
-from pid_monitor._private import libfrontend
+from pid_monitor._lib import libfrontend
 
 if __name__ == '__main__':
     libfrontend.setup_frontend(

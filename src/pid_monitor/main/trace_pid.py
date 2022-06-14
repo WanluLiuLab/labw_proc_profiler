@@ -5,11 +5,12 @@ import signal
 import sys
 from typing import List
 
-from pid_monitor._private import PSUTIL_NOTFOUND_ERRORS, DEFAULT_PROCESS_LEVEL_TRACERS, DEFAULT_SYSTEM_LEVEL_TRACERS, \
-    DEFAULT_REFRESH_INTERVAL, DEFAULT_FRONTEND_REFRESH_INTERVAL
-from pid_monitor._private.dt_mvc.base_dispatcher_class import DispatcherController
-from pid_monitor._private.dt_mvc.std_dispatcher import SystemTracerDispatcherThread, ProcessTracerDispatcherThread
-from pid_monitor._private.frontend import show_frontend
+from pid_monitor._dt_mvc import PSUTIL_NOTFOUND_ERRORS
+from pid_monitor._dt_mvc.frontend import show_frontend
+from pid_monitor._dt_mvc.pm_config import PMConfig
+from pid_monitor._dt_mvc.std_dispatcher import DispatcherController
+from pid_monitor._dt_mvc.std_dispatcher.process_tracer_dispatcher import ProcessTracerDispatcherThread
+from pid_monitor._dt_mvc.std_dispatcher.system_tracer_dispatcher import SystemTracerDispatcherThread
 
 _LOG_HANDLER = logging.getLogger()
 
@@ -27,18 +28,14 @@ def _initialize_registry(output_basename: str):
 
 
 def _start_system_tracer_dispatcher(
-        output_basename: str,
-        tracers_to_load: List[str],
-        interval: float,
+        pmc: PMConfig,
         dispatcher_controller: DispatcherController
 ) -> SystemTracerDispatcherThread:
     """
     Start system tracer dispatcher.
     """
     system_dispatcher_process = SystemTracerDispatcherThread(
-        basename=output_basename,
-        tracers_to_load=tracers_to_load,
-        interval=interval,
+        pmc=pmc,
         dispatcher_controller=dispatcher_controller
     )
     system_dispatcher_process.start()
@@ -48,9 +45,7 @@ def _start_system_tracer_dispatcher(
 
 def _start_main_tracer_dispatcher(
         trace_pid: int,
-        output_basename: str,
-        tracers_to_load: List[str],
-        interval: float,
+        pmc: PMConfig,
         dispatcher_controller: DispatcherController
 ) -> ProcessTracerDispatcherThread:
     """
@@ -59,9 +54,7 @@ def _start_main_tracer_dispatcher(
     try:
         main_dispatcher = ProcessTracerDispatcherThread(
             trace_pid=trace_pid,
-            output_basename=output_basename,
-            tracers_to_load=tracers_to_load,
-            interval=interval,
+            pmc=pmc,
             dispatcher_controller=dispatcher_controller
         )
     except PSUTIL_NOTFOUND_ERRORS:
@@ -75,59 +68,12 @@ def _start_main_tracer_dispatcher(
 
 def _parse_args(args: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-p", "--pid",
-        help="PID to trace",
-        type=int,
-        required=True
-    )
-    parser.add_argument(
-        "-o", "--out",
-        help="Basename of output files",
-        type=str,
-        required=False,
-        default=None
-    )
-    parser.add_argument(
-        "--process_level_tracers",
-        help="Manually specify process_level_tracers",
-        type=str,
-        required=False,
-        nargs='*',
-        default=DEFAULT_PROCESS_LEVEL_TRACERS
-    )
-    parser.add_argument(
-        "--system_level_tracers",
-        help="Manually specify system_level_tracers",
-        type=str,
-        required=False,
-        nargs='*',
-        default=DEFAULT_SYSTEM_LEVEL_TRACERS
-    )
-    parser.add_argument(
-        "--interval",
-        help="Manually specify interval",
-        type=float,
-        required=False,
-        default=DEFAULT_REFRESH_INTERVAL
-    )
-    parser.add_argument(
-        "--frontend_refresh_interval",
-        help="Manually specify frontend_refresh_interval",
-        type=float,
-        required=False,
-        default=DEFAULT_FRONTEND_REFRESH_INTERVAL
-    )
+    parser = PMConfig.append_pmc_args_to_argparser(parser)
     return parser.parse_args(args)
 
 
 def trace_pid(
-        toplevel_trace_pid: int,
-        output_basename: str,
-        process_level_tracers: List[str] = DEFAULT_PROCESS_LEVEL_TRACERS,
-        system_level_tracers: List[str] = DEFAULT_SYSTEM_LEVEL_TRACERS,
-        interval: float = DEFAULT_REFRESH_INTERVAL,
-        frontend_refresh_interval: float = DEFAULT_FRONTEND_REFRESH_INTERVAL
+        pmc: PMConfig
 ) -> int:
     """
     The main entrance point
@@ -139,7 +85,7 @@ def trace_pid(
     :return: 0 for success.
     """
     _LOG_HANDLER.info(
-        f"Tracer started with toplevel_trace_pid={toplevel_trace_pid} and output_basename={output_basename}"
+        f"Tracer started with toplevel_trace_pid={pmc.toplevel_trace_pid} and output_basename={pmc.output_basename}"
     )
     dispatcher_controller = DispatcherController()
 
@@ -155,22 +101,18 @@ def trace_pid(
     except ValueError:  # Not main thread
         pass
 
-    _initialize_registry(output_basename)
+    _initialize_registry(pmc.output_basename)
     system_tracer_dispatcher = _start_system_tracer_dispatcher(
-        output_basename=output_basename,
-        tracers_to_load=system_level_tracers,
-        interval=interval,
+        pmc=pmc,
         dispatcher_controller=dispatcher_controller
     )
     main_tracer_dispatcher = _start_main_tracer_dispatcher(
-        trace_pid=toplevel_trace_pid,
-        output_basename=output_basename,
-        tracers_to_load=process_level_tracers,
-        interval=interval,
+        trace_pid=pmc.toplevel_trace_pid,
+        pmc=pmc,
         dispatcher_controller=dispatcher_controller
     )
     show_frontend(
-        frontend_refresh_interval=frontend_refresh_interval,
+        pmc=pmc,
         dispatcher_controller=dispatcher_controller
     )
     dispatcher_controller.terminate_all_dispatchers(signal.SIGTERM)  # Send signal.SIGINT to all dispatchers
@@ -184,17 +126,9 @@ def trace_pid(
 
 
 def main(args: List[str]):
-    args = _parse_args(args)
-    if args.out is None:
-        os.makedirs(f"pid_monitor_{args.pid}", exist_ok=True)
-        output_basename = os.path.join(f"pid_monitor_{args.pid}", "trace")
-    else:
-        output_basename=args.out
+    pmc = PMConfig.from_args(
+        args=args
+    )
     return trace_pid(
-        toplevel_trace_pid=args.pid,
-        output_basename=output_basename,
-        process_level_tracers=args.process_level_tracers,
-        system_level_tracers=args.system_level_tracers,
-        interval=args.interval,
-        frontend_refresh_interval=args.frontend_refresh_interval
+        pmc=pmc
     )

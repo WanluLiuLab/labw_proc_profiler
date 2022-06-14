@@ -1,6 +1,6 @@
 from typing import List
 
-from pid_monitor._private.dt_mvc.tracer_loader import list_tracer
+from pid_monitor._dt_mvc.std_dispatcher import list_tracer
 
 
 def main(_: List[str]):

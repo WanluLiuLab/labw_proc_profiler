@@ -6,6 +6,7 @@ import uuid
 from collections import namedtuple
 from typing import List, Any, Mapping, Tuple
 
+from pid_monitor._dt_mvc.pm_config import PMConfig
 from pid_monitor.main import trace_pid
 
 _MONITORED_PROCESS = namedtuple('DefaultProcess', 'pid')(pid=os.getpid())
@@ -32,12 +33,11 @@ class _PidMonitorProcess(threading.Thread):
         self.pid_monitor_kwargs = pid_monitor_kwargs
 
     def run(self):
-        trace_pid.trace_pid(
+        trace_pid.trace_pid(PMConfig(
             toplevel_trace_pid=self.monitored_pid,
             output_basename=os.path.abspath(os.path.expanduser(os.path.join(
                 self.output_basename, "proc_profiler", ""
-            ))),
-            **self.pid_monitor_kwargs
+            ))))
         )
 
 

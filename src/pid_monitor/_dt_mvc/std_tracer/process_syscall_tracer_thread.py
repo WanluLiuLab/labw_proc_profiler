@@ -4,7 +4,7 @@ import shutil
 import subprocess
 from typing import TextIO, Tuple
 
-from pid_monitor._private.dt_mvc.base_tracer_class import BaseProcessTracerThread
+from pid_monitor._dt_mvc.std_tracer import BaseProcessTracerThread
 
 PLINE_ERR_REGEX = re.compile(r"^ = -1 (.+) \(.+\)$")
 PLINE_SIGNAL_REGEX = re.compile(r"--- (.+?) .*")
