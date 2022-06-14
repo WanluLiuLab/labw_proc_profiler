@@ -37,7 +37,6 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
             output_basename: str,
             tracers_to_load: List[str],
             interval: float,
-            resolution: float,
             dispatcher_controller: DispatcherController
     ):
         """
@@ -55,7 +54,6 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
             output_basename=output_basename,
             tracers_to_load=tracers_to_load,
             interval=interval,
-            resolution=resolution,
             dispatcher_controller=dispatcher_controller
         )
 
@@ -163,8 +161,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
                         output_basename=self.output_basename,
                         tracers_to_load=self.tracers_to_load,
                         interval=self.interval,
-                        dispatcher_controller=self.dispatcher_controller,
-                        resolution=self.resolution
+                        dispatcher_controller=self.dispatcher_controller
                     )
                     new_thread.start()
                     self.append_threadpool(new_thread)
@@ -268,7 +265,6 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
             basename: str,
             tracers_to_load: List[str],
             interval: float,
-            resolution: float,
             dispatcher_controller: DispatcherController
     ):
         super().__init__(
@@ -276,7 +272,6 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
             output_basename=basename,
             tracers_to_load=tracers_to_load,
             interval=interval,
-            resolution=resolution,
             dispatcher_controller=dispatcher_controller
         )
         self._setup_cache()

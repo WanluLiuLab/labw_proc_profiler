@@ -1,12 +1,14 @@
+from decimal import FloatOperation
 import logging
 import threading
 from abc import abstractmethod, ABC
 from time import sleep
+import time
 from typing import TextIO
 
 import psutil
 
-from pid_monitor._private import PSUTIL_NOTFOUND_ERRORS, DEFAULT_SYSTEM_INDICATOR_PID, get_timestamp
+from pid_monitor._private import PSUTIL_NOTFOUND_ERRORS, DEFAULT_SYSTEM_INDICATOR_PID
 
 
 class BaseTracerThread(threading.Thread):
@@ -31,16 +33,12 @@ class BaseTracerThread(threading.Thread):
     log_handler: logging.Logger
     """The logger handler"""
 
-    resolution: float
-    """Resolution of time reporting"""
-
     def __init__(
             self,
             output_basename: str,
             trace_pid: int,
             tracer_type: str,
-            interval: float,
-            resolution: float
+            interval: float
     ):
         super().__init__()
         self.output_basename = output_basename
@@ -48,7 +46,6 @@ class BaseTracerThread(threading.Thread):
         self.tracer_type = tracer_type
         self.trace_pid = trace_pid
         self.should_exit = False
-        self.resolution = resolution
         self.log_handler = logging.getLogger()
         self.log_handler.debug(f"Tracer for TRACE_PID={self.trace_pid} TYPE={self.tracer_type} added")
 
@@ -56,7 +53,7 @@ class BaseTracerThread(threading.Thread):
         """
         Get timestamp in an accuracy of 0.01 seconds.
         """
-        return get_timestamp(self.resolution)
+        return str(time.time())
 
     def run(self):
         self.log_handler.debug(f"Tracer for TRACE_PID={self.trace_pid} TYPE={self.tracer_type} started")
@@ -105,15 +102,13 @@ class BaseSystemTracerThread(BaseTracerThread, ABC):
             self,
             output_basename: str,
             tracer_type: str,
-            interval: float,
-            resolution: float
+            interval: float
     ):
         super().__init__(
             output_basename=output_basename,
             trace_pid=DEFAULT_SYSTEM_INDICATOR_PID,
             tracer_type=tracer_type,
-            interval=interval,
-            resolution=resolution
+            interval=interval
         )
 
 
@@ -123,15 +118,13 @@ class BaseProcessTracerThread(BaseTracerThread, ABC):
             trace_pid: int,
             output_basename: str,
             tracer_type: str,
-            interval: float,
-            resolution: float
+            interval: float
     ):
         super().__init__(
             output_basename=output_basename,
             trace_pid=trace_pid,
             tracer_type=tracer_type,
-            interval=interval,
-            resolution=resolution
+            interval=interval
         )
         self.trace_pid = trace_pid
         try:

@@ -8,7 +8,7 @@ import time
 from abc import abstractmethod
 from typing import Dict, Any, List, Union, Set
 
-from pid_monitor._private import DEFAULT_SYSTEM_INDICATOR_PID, get_timestamp
+from pid_monitor._private import DEFAULT_SYSTEM_INDICATOR_PID
 from pid_monitor._private.dt_mvc.tracer_loader import get_tracer_class
 
 
@@ -45,7 +45,6 @@ class BaseTracerDispatcherThread(threading.Thread):
             output_basename: str,
             tracers_to_load: tracers_to_load,
             interval: float,
-            resolution: float,
             dispatcher_controller: DispatcherController
     ):
         super().__init__()
@@ -55,11 +54,9 @@ class BaseTracerDispatcherThread(threading.Thread):
         self.thread_pool = {}
         self.tracers_to_load = tracers_to_load
         self.interval = interval
-        self.resolution = resolution
         self.tracer_kwargs = {
             "output_basename": self.output_basename,
             "interval": self.interval,
-            "resolution": self.resolution
         }
         self.should_exit = False
         dispatcher_controller.register_dispatcher(self.trace_pid, self)
@@ -69,7 +66,7 @@ class BaseTracerDispatcherThread(threading.Thread):
         """
         Get timestamp in an accuracy of 0.01 seconds.
         """
-        return get_timestamp(self.resolution)
+        return str(time.time())
 
     def append_threadpool(self, thread: threading.Thread):
         self.thread_pool[thread.__class__.__name__] = thread

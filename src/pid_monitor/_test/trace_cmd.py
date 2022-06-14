@@ -1,3 +1,4 @@
+import os
 import shutil
 
 from pid_monitor.main.trace_cmd import run_process
@@ -5,6 +6,10 @@ from pid_monitor.main.trace_cmd import run_process
 if __name__ == "__main__":
     try:
         shutil.rmtree("proc_profiler_test")
+    except FileNotFoundError:
+        pass
+    try:
+        os.remove("tracer.log")
     except FileNotFoundError:
         pass
     run_process(

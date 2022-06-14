@@ -6,11 +6,10 @@ import sys
 from typing import List
 
 from pid_monitor._private import PSUTIL_NOTFOUND_ERRORS, DEFAULT_PROCESS_LEVEL_TRACERS, DEFAULT_SYSTEM_LEVEL_TRACERS, \
-    DEFAULT_REFRESH_INTERVAL, DEFAULT_RESOLUTION
+    DEFAULT_REFRESH_INTERVAL, DEFAULT_FRONTEND_REFRESH_INTERVAL
 from pid_monitor._private.dt_mvc.base_dispatcher_class import DispatcherController
 from pid_monitor._private.dt_mvc.std_dispatcher import SystemTracerDispatcherThread, ProcessTracerDispatcherThread
 from pid_monitor._private.frontend import show_frontend
-from pid_monitor._private.report import make_all_report
 
 _LOG_HANDLER = logging.getLogger()
 
@@ -31,7 +30,6 @@ def _start_system_tracer_dispatcher(
         output_basename: str,
         tracers_to_load: List[str],
         interval: float,
-        resolution: float,
         dispatcher_controller: DispatcherController
 ) -> SystemTracerDispatcherThread:
     """
@@ -41,8 +39,7 @@ def _start_system_tracer_dispatcher(
         basename=output_basename,
         tracers_to_load=tracers_to_load,
         interval=interval,
-        dispatcher_controller=dispatcher_controller,
-        resolution=resolution
+        dispatcher_controller=dispatcher_controller
     )
     system_dispatcher_process.start()
     _LOG_HANDLER.debug("System dispatcher started")
@@ -54,7 +51,6 @@ def _start_main_tracer_dispatcher(
         output_basename: str,
         tracers_to_load: List[str],
         interval: float,
-        resolution: float,
         dispatcher_controller: DispatcherController
 ) -> ProcessTracerDispatcherThread:
     """
@@ -66,7 +62,6 @@ def _start_main_tracer_dispatcher(
             output_basename=output_basename,
             tracers_to_load=tracers_to_load,
             interval=interval,
-            resolution=resolution,
             dispatcher_controller=dispatcher_controller
         )
     except PSUTIL_NOTFOUND_ERRORS:
@@ -99,7 +94,7 @@ def _parse_args(args: List[str]) -> argparse.Namespace:
         type=str,
         required=False,
         nargs='*',
-        default=None
+        default=DEFAULT_PROCESS_LEVEL_TRACERS
     )
     parser.add_argument(
         "--system_level_tracers",
@@ -107,21 +102,21 @@ def _parse_args(args: List[str]) -> argparse.Namespace:
         type=str,
         required=False,
         nargs='*',
-        default=None
+        default=DEFAULT_SYSTEM_LEVEL_TRACERS
     )
     parser.add_argument(
         "--interval",
         help="Manually specify interval",
         type=float,
         required=False,
-        default=None
+        default=DEFAULT_REFRESH_INTERVAL
     )
     parser.add_argument(
-        "--not_make_report",
-        help="Trace without making report",
+        "--frontend_refresh_interval",
+        help="Manually specify frontend_refresh_interval",
+        type=float,
         required=False,
-        action="store_true",
-        default=False
+        default=DEFAULT_FRONTEND_REFRESH_INTERVAL
     )
     return parser.parse_args(args)
 
@@ -132,8 +127,7 @@ def trace_pid(
         process_level_tracers: List[str] = DEFAULT_PROCESS_LEVEL_TRACERS,
         system_level_tracers: List[str] = DEFAULT_SYSTEM_LEVEL_TRACERS,
         interval: float = DEFAULT_REFRESH_INTERVAL,
-        resolution: float = DEFAULT_RESOLUTION,
-        make_report: bool = True
+        frontend_refresh_interval: float = DEFAULT_FRONTEND_REFRESH_INTERVAL
 ) -> int:
     """
     The main entrance point
@@ -166,7 +160,6 @@ def trace_pid(
         output_basename=output_basename,
         tracers_to_load=system_level_tracers,
         interval=interval,
-        resolution=resolution,
         dispatcher_controller=dispatcher_controller
     )
     main_tracer_dispatcher = _start_main_tracer_dispatcher(
@@ -174,11 +167,10 @@ def trace_pid(
         output_basename=output_basename,
         tracers_to_load=process_level_tracers,
         interval=interval,
-        resolution=resolution,
         dispatcher_controller=dispatcher_controller
     )
     show_frontend(
-        interval=interval,
+        frontend_refresh_interval=frontend_refresh_interval,
         dispatcher_controller=dispatcher_controller
     )
     dispatcher_controller.terminate_all_dispatchers(signal.SIGTERM)  # Send signal.SIGINT to all dispatchers
@@ -188,26 +180,21 @@ def trace_pid(
 
     system_tracer_dispatcher.join()
     _LOG_HANDLER.debug("System dispatcher ended")
-
-    # Make report
-    if make_report:
-        make_all_report(dispatcher_controller.all_pids, output_basename)
     return 0
 
 
 def main(args: List[str]):
     args = _parse_args(args)
-    trace_pid_kwargs = {
-        "toplevel_trace_pid": args.pid
-    }
     if args.out is None:
         os.makedirs(f"pid_monitor_{args.pid}", exist_ok=True)
-        trace_pid_kwargs["output_basename"] = os.path.join(f"pid_monitor_{args.pid}", "trace")
-    if args.process_level_tracers is not None:
-        trace_pid_kwargs["process_level_tracers"] = args.process_level_tracers
-    if args.system_level_tracers is not None:
-        trace_pid_kwargs["system_level_tracers"] = args.system_level_tracers
-    if args.interval is not None:
-        trace_pid_kwargs["interval"] = args.interval
-    trace_pid_kwargs["make_report"] = not args.not_make_report
-    return trace_pid(**trace_pid_kwargs)
+        output_basename = os.path.join(f"pid_monitor_{args.pid}", "trace")
+    else:
+        output_basename=args.out
+    return trace_pid(
+        toplevel_trace_pid=args.pid,
+        output_basename=output_basename,
+        process_level_tracers=args.process_level_tracers,
+        system_level_tracers=args.system_level_tracers,
+        interval=args.interval,
+        frontend_refresh_interval=args.frontend_refresh_interval
+    )

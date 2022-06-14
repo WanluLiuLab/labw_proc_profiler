@@ -50,7 +50,7 @@ def _print_frontend_process_tracer(
 
 
 def show_frontend(
-        interval: float,
+        frontend_refresh_interval: float,
         dispatcher_controller: DispatcherController
 ):
     """Show the frontend."""
@@ -62,5 +62,5 @@ def show_frontend(
             process_table=process_table,
             dispatcher_controller=dispatcher_controller
         )
-        sleep(1)
+        sleep(frontend_refresh_interval)
     _LOGGER_HANDLER.info("Toplevel PID finished")

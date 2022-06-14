@@ -9,6 +9,7 @@ PSUTIL_NOTFOUND_ERRORS = (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.Acc
 
 DEFAULT_REFRESH_INTERVAL = 0.01
 DEFAULT_RESOLUTION = 0.01
+DEFAULT_FRONTEND_REFRESH_INTERVAL = 1
 DEFAULT_SYSTEM_INDICATOR_PID = -1
 DEFAULT_PROCESS_LEVEL_TRACERS = [
     "ProcessIOTracerThread",
@@ -36,18 +37,6 @@ def get_total_cpu_time(_p: psutil.Process) -> float:
         return cpu_time_tuple.system + cpu_time_tuple.user
     except PSUTIL_NOTFOUND_ERRORS:
         return -1
-
-
-def get_timestamp(resolution: float) -> str:
-    """
-    Get timestamp in an accuracy of 0.01 seconds.
-    """
-    scale = 1 / resolution
-    time_in_ms = time.time() * scale
-    return time.strftime(
-        f'%Y-%m-%d %H:%M:%S.{int(time_in_ms % scale)}',
-        time.localtime(time_in_ms / scale)
-    )
 
 
 def to_human_readable(
