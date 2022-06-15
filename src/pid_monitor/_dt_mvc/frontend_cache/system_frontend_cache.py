@@ -22,8 +22,11 @@ def to_human_readable(
     return str(num) + dc + suffix
 
 
-def percent_to_str(num: float) -> str:
-    return str(round(num * 100, 2)) + "%"
+def percent_to_str(num: float, total: float) -> str:
+    if total != 0:
+        return str(round(num/total * 100, 2)) + "%"
+    else:
+        return "NA"
 
 
 class SystemFrontendCache:
@@ -47,13 +50,13 @@ class SystemFrontendCache:
     def __str__(self):
         swap_avail = self.swap_total - self.swap_used
         return "".join((
-            "CPU%: ", str(self.cpu_percent), "; ",
+            "CPU%: ", percent_to_str(self.cpu_percent, 100), "; ",
             "VIRTUALMEM: ",
             "AVAIL: ", to_human_readable(self.vm_avail), "/", to_human_readable(self.vm_total),
-            "=(", percent_to_str(self.vm_avail / self.vm_total), "), ",
+            "=(", percent_to_str(self.vm_avail, self.vm_total), "), ",
             "BUFFERED: ", to_human_readable(self.vm_buffered), ", ",
             "SHARED: ", to_human_readable(self.vm_shared), "; ",
             "SWAP: ",
             "AVAIL: ", to_human_readable(swap_avail), "/", to_human_readable(self.swap_total),
-            "=(", percent_to_str(swap_avail / self.swap_total), ") "
+            "=(", percent_to_str(swap_avail, self.swap_total), ") "
         ))
