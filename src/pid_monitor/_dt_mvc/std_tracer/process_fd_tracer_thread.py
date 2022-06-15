@@ -23,7 +23,7 @@ class ProcessFDTracerThread(BaseProcessTracerThread):
             frontend_cache=frontend_cache
         )
         self._init_setup_hook(
-            tracer_type="cpu",
+            tracer_type="fd",
             table_appender_header=[
                 'TIME',
                 'FD',
