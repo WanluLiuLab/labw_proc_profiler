@@ -1,3 +1,8 @@
+from typing import List
+
+from pid_monitor._dt_mvc.frontend_cache import percent_to_str, to_human_readable
+
+
 class ProcessFrontendCache:
     pid: int
     ppid: int
@@ -27,3 +32,19 @@ class ProcessFrontendCache:
         self.num_child_processes = -1
         self.name = name
         self.ppid = ppid
+
+    def to_prettytable_row(self) -> List[str]:
+        return list(map(
+            lambda x: repr(x).replace('\'', '').replace('\"', ''),
+            (
+                self.pid,
+                self.ppid,
+                self.name,
+                self.stat,
+                percent_to_str(self.cpu_percent, 100),
+                f"{self.cpu_time:.2f}",
+                to_human_readable(self.resident_mem),
+                self.num_threads,
+                self.num_child_processes
+            )
+        ))

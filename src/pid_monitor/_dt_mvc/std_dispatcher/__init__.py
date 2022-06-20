@@ -152,23 +152,6 @@ class BaseTracerDispatcherThread(ThreadWithPMC):
         return repr(self)
 
 
-def _get_preprocess_frontend_cache(cache: ProcessFrontendCache) -> List[str]:
-    return list(map(
-        lambda x: repr(x).replace('\'', '').replace('\"', ''),
-        (
-            cache.pid,
-            cache.ppid,
-            cache.name,
-            cache.stat,
-            cache.cpu_percent,
-            cache.cpu_time,
-            cache.resident_mem,
-            cache.num_threads,
-            cache.num_child_processes
-        )
-    ))
-
-
 class DispatcherController:
     _dispatchers: Dict[int, BaseTracerDispatcherThread]
     """Dict[pid, Dispatcher] for all active dispatchers"""
@@ -227,7 +210,7 @@ class DispatcherController:
         self._pretty_table.clear_rows()
         for pid, cache in self._frontend_caches.items():
             if pid != DEFAULT_SYSTEM_INDICATOR_PID:
-                self._pretty_table.add_row(_get_preprocess_frontend_cache(cache))
+                self._pretty_table.add_row(cache.to_prettytable_row())
         return str(self._pretty_table)
 
     def get_frontend_cache(self) -> str:

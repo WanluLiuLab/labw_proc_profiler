@@ -28,6 +28,7 @@ class ProcessMEMTracerThread(BaseProcessTracerThread):
                 'VIRT',
                 'RESIDENT',
                 'SHARED',
+                'LIB',
                 'TEXT',
                 'DATA',
                 'SWAP'
@@ -44,6 +45,7 @@ class ProcessMEMTracerThread(BaseProcessTracerThread):
             x.vms,
             x.rss,
             x.shared,
+            x.lib,
             x.text,
             x.data,
             x.swap

@@ -48,6 +48,10 @@ class BaseTracerThread(ThreadWithPMC):
             header=table_appender_header
         )
         self.log_handler.debug(f"Tracer for TRACE_PID={self.trace_pid} TYPE={self.tracer_type} added")
+        self._post_inithook_hook()
+
+    def _post_inithook_hook(self):
+        pass
 
     def __init__(
             self,
@@ -117,6 +121,8 @@ class BaseProcessTracerThread(BaseTracerThread, ABC):
             frontend_cache=frontend_cache
         )
         self.trace_pid = trace_pid
+
+    def _post_inithook_hook(self):
         try:
             self._process = psutil.Process(pid=self.trace_pid)
         except PSUTIL_NOTFOUND_ERRORS as e:

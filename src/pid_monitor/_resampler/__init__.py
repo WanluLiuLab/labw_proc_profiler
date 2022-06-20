@@ -2,7 +2,6 @@ import glob
 import math
 import os
 import re
-import shutil
 from typing import Tuple, Optional
 
 import pandas as pd
@@ -50,17 +49,17 @@ def resample(output_basename: str):
         else:
             full_df = full_df.join(df, on="TIME", lsuffix="_L", rsuffix="_R")
             for name in (
-                "VIRT",
-                "RESIDENT",
-                "SHARED",
-                "TEXT",
-                "DATA",
-                "SWAP"
+                    "VIRT",
+                    "RESIDENT",
+                    "SHARED",
+                    "TEXT",
+                    "DATA",
+                    "SWAP"
             ):
                 full_df[name] = full_df[f"{name}_L"] + full_df[f"{name}_R"]
                 full_df = full_df.drop([f"{name}_R", f"{name}_L"], axis=1)
-                #print(full_df.dtypes.keys())
-    print(full_df)
+                # print(full_df.dtypes.keys())
+    return full_df
 
 
 class ResamplerConfig:
@@ -141,4 +140,3 @@ if __name__ == '__main__':
     resample(
         "/home/yuzj/Documents/gpmf/opt/proc_profiler/src/pid_monitor/_test/proc_profiler_test"
     )
-
