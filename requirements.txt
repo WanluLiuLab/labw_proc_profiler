@@ -5,3 +5,8 @@ docker~=5.0.3
 python-dateutil~=2.8.2
 pandas~=1.4
 wheel
+pyarrow~=8.0
+pip~=22.1
+seaborn~=0.11.2
+PyQt5
+matplotlib~=3.5.2
