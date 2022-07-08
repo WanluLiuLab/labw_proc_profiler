@@ -19,7 +19,7 @@ DEFAULT_SYSTEM_LEVEL_TRACERS = [
     "SystemCPUTracerThread",
     "SystemSWAPTracerThread"
 ]
-DEFAULT_TABLE_APPENDER = "TSVTableAppender"
+DEFAULT_TABLE_APPENDER = "ParquetTableAppender"
 
 
 class PMConfig:

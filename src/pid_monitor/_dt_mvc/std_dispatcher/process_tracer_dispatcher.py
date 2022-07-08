@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import threading
 from time import sleep
+from typing import Optional
 
 import psutil
 
 from pid_monitor._dt_mvc import PSUTIL_NOTFOUND_ERRORS
+from pid_monitor._dt_mvc.appender import BaseTableAppender, load_table_appender_class
 from pid_monitor._dt_mvc.frontend_cache.process_frontend_cache import ProcessFrontendCache
 from pid_monitor._dt_mvc.pm_config import PMConfig
 from pid_monitor._dt_mvc.std_dispatcher import BaseTracerDispatcherThread, DispatcherController
@@ -37,13 +39,19 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
     Also initializes and monitors task monitors like :py:class:`TraceIOThread`.
     """
 
+    def before_ending(self):
+        pass
+
     _cached_last_cpu_time: float
+    _registry_appender: BaseTableAppender
+    process: Optional[psutil.Process]
 
     def __init__(
             self,
             trace_pid: int,
             pmc: PMConfig,
-            dispatcher_controller: DispatcherController
+            dispatcher_controller: DispatcherController,
+            registry_appender: BaseTableAppender
     ):
         """
         The constructor of the class will do following things:
@@ -60,19 +68,36 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
             pmc=pmc,
             dispatcher_controller=dispatcher_controller
         )
+        self.process = None
+        self._registry_appender = registry_appender
 
+    def _update_last_cpu_time(self):
+        self._cached_last_cpu_time = get_total_cpu_time(self.process)
+        self._frontend_cache.cpu_time = self._cached_last_cpu_time
+        with open(f"{self.pmc.output_basename}.{self.trace_pid}.cputime", mode='w') as writer:
+            writer.write(str(self._cached_last_cpu_time) + '\n')
+
+    def run_body(self):
+        """
+        The major running part of this function performs following things:
+
+        - Refresh CPU time.
+        - Detect whether the process have forked sub-processes.
+        - Detect whether the process have created new threads.
+        """
         self._cached_last_cpu_time = -1
         try:
             self.process = psutil.Process(self.trace_pid)
             name = self.process.name()
             ppid = self.process.ppid()
+            self._write_registry()
+            self._write_env()
+            self._write_mapfile()
         except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
+            self._dispatcher_controller.remove_dispatcher(self.trace_pid)
             raise e
 
-        self._write_registry()
-        self._write_env()
-        self._write_mapfile()
         self._frontend_cache = ProcessFrontendCache(
             name=name,
             ppid=ppid,
@@ -83,21 +108,8 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
             self._frontend_cache
         )
         self.start_tracers(
-            pmc.process_level_tracer_to_load
+            self.pmc.process_level_tracer_to_load
         )
-
-    def _update_last_cpu_time(self):
-        self._cached_last_cpu_time = get_total_cpu_time(self.process)
-        self._frontend_cache.cpu_time = self._cached_last_cpu_time
-
-    def run_body(self):
-        """
-        The major running part of this function performs following things:
-
-        - Refresh CPU time.
-        - Detect whether the process have forked sub-processes.
-        - Detect whether the process have created new threads.
-        """
         while not self.should_exit:
             try:
                 with _DISPATCHER_MUTEX:
@@ -118,16 +130,13 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         - Current working directory
         """
         try:
-            with _REG_MUTEX:
-                with open(f"{self.pmc.output_basename}.reg.tsv", mode='a') as writer:
-                    writer.write('\t'.join((
-                        str(self.get_timestamp()),
-                        str(self.trace_pid),
-                        " ".join(self.process.cmdline()),
-                        self.process.exe(),
-                        self.process.cwd()
-                    )) + '\n')
-                    writer.flush()
+            self._registry_appender.append([
+                self.get_timestamp(),
+                self.trace_pid,
+                " ".join(self.process.cmdline()),
+                self.process.exe(),
+                self.process.cwd()
+            ])
         except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             raise e
@@ -139,10 +148,13 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         If the process changes its environment variable during execution, it will NOT be recorded!
         """
         try:
-            with open(f"{self.pmc.output_basename}.{self.trace_pid}.env.tsv", mode='w') as writer:
-                writer.write('\t'.join(("NAME", "VALUE")) + '\n')
-                for env_name, env_value in self.process.environ().items():
-                    writer.write('\t'.join((env_name, env_value)) + '\n')
+            appender = load_table_appender_class(self.pmc.table_appender_type)(
+                filename=f"{self.pmc.output_basename}.{self.trace_pid}.env",
+                header=["NAME", "VALUE"]
+            )
+            for env_name, env_value in self.process.environ().items():
+                appender.append([env_name, env_value])
+            appender.close()
         except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             raise e
@@ -154,15 +166,18 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         Mapfile information shows how files, especially libraries are stored in memory.
         """
         try:
-            with open(f"{self.pmc.output_basename}.{self.trace_pid}.mapfile.tsv", mode='w') as writer:
-                writer.write('\t'.join(("PATH", "RESIDENT", "VIRT", "SWAP")) + '\n')
-                for item in self.process.memory_maps():
-                    writer.write('\t'.join((
-                        item.path,
-                        str(item.rss),
-                        str(item.size),
-                        str(item.swap)
-                    )) + '\n')
+            appender = load_table_appender_class(self.pmc.table_appender_type)(
+                filename=f"{self.pmc.output_basename}.{self.trace_pid}.mapfile",
+                header=["PATH", "RESIDENT", "VIRT", "SWAP"]
+            )
+            for item in self.process.memory_maps():
+                appender.append([
+                    item.path,
+                    item.rss,
+                    item.size,
+                    item.swap
+                ])
+            appender.close()
         except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             raise e
@@ -178,19 +193,11 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
                     new_thread = ProcessTracerDispatcherThread(
                         trace_pid=process.pid,
                         pmc=self.pmc,
-                        dispatcher_controller=self._dispatcher_controller
+                        dispatcher_controller=self._dispatcher_controller,
+                        registry_appender=self._registry_appender
                     )
                     new_thread.start()
                     self.append_threadpool(new_thread)
         except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             raise e
-
-    def before_ending(self):
-        """
-        This function performs following things:
-
-        - Record CPU time.
-        """
-        with open(f"{self.pmc.output_basename}.{self.trace_pid}.cputime", mode='w') as writer:
-            writer.write(str(self._cached_last_cpu_time) + '\n')

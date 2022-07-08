@@ -1,6 +1,7 @@
 import psutil
 
 from pid_monitor._dt_mvc import DEFAULT_SYSTEM_INDICATOR_PID
+from pid_monitor._dt_mvc.appender import load_table_appender_class
 from pid_monitor._dt_mvc.frontend_cache.system_frontend_cache import SystemFrontendCache
 from pid_monitor._dt_mvc.pm_config import PMConfig
 from pid_monitor._dt_mvc.std_dispatcher import BaseTracerDispatcherThread, DispatcherController
@@ -28,6 +29,8 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
             pmc=pmc,
             dispatcher_controller=dispatcher_controller
         )
+
+    def run_body(self):
         self._write_mnt()
         self._frontend_cache = SystemFrontendCache()
         self._dispatcher_controller.register_frontend_cache(
@@ -35,29 +38,32 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
             self._frontend_cache
         )
         self.start_tracers(
-            pmc.system_level_tracers_to_load
+            self.pmc.system_level_tracers_to_load
         )
 
     def _write_mnt(self):
         """
         Write mounted volumes to ``mnt.csv``.
         """
-        with open(f"{self.pmc.output_basename}.mnt.tsv", mode='w') as writer:
-            writer.write('\t'.join((
+        appender = load_table_appender_class(self.pmc.table_appender_type)(
+            filename=f"{self.pmc.output_basename}.mnt",
+            header=[
                 "DEVICE",
                 "MOUNT_POINT",
                 "FSTYPE",
                 "OPTS",
                 "TOTAL",
                 "USED"
-            )) + '\n')
-            for item in psutil.disk_partitions():
-                disk_usage = psutil.disk_usage(item.mountpoint)
-                writer.write('\t'.join((
-                    item.device,
-                    item.mountpoint,
-                    item.fstype,
-                    item.opts,
-                    str(disk_usage.total),
-                    str(disk_usage.used)
-                )) + '\n')
+            ]
+        )
+        for item in psutil.disk_partitions():
+            disk_usage = psutil.disk_usage(item.mountpoint)
+            appender.append([
+                item.device,
+                item.mountpoint,
+                item.fstype,
+                item.opts,
+                disk_usage.total,
+                disk_usage.used
+            ])
+        appender.close()

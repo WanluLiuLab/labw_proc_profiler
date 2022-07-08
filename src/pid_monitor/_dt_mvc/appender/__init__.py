@@ -5,10 +5,18 @@ from pid_monitor._dt_mvc.appender.typing import BaseTableAppender
 
 POSSIBLE_APPENDER_PATHS = (
     "pid_monitor._dt_mvc.appender.tsv",
+    "pid_monitor._dt_mvc.appender.csv",
+    "pid_monitor._dt_mvc.appender.arrow",
+    "pid_monitor._dt_mvc.appender.parquet",
+    "pid_monitor._dt_mvc.appender.dumb"
 )
 
 AVAILABLE_TABLE_APPENDERS = {
-    "TSVTableAppender": 'TSVTableAppender'
+    "TSVTableAppender": 'TSVTableAppender',
+    "CSVTableAppender": 'CSVTableAppender',
+    "ArrowTableAppender": 'ArrowTableAppender',
+    "ParquetTableAppender": 'ParquetTableAppender',
+    "DumbTableAppender": 'DumbTableAppender',
 }
 
 

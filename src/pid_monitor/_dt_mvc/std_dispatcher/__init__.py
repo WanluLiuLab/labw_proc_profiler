@@ -183,14 +183,14 @@ class DispatcherController:
         self._dispatchers.clear()
         gc.collect()
 
-    def get_current_active_pids(self):
-        return self._dispatchers.keys()
+    def get_current_active_pids(self) -> List[int]:
+        return list(self._dispatchers.keys())
 
-    def register_dispatcher(self, dispatcher: BaseTracerDispatcherThread):
+    def register_dispatcher(self, dispatcher: BaseTracerDispatcherThread) -> None:
         self._dispatchers[dispatcher.trace_pid] = dispatcher
         self.all_pids.add(dispatcher.trace_pid)
 
-    def remove_dispatcher(self, pid: int):
+    def remove_dispatcher(self, pid: int) -> None:
         try:
             self._dispatchers.pop(pid)
             self._frontend_caches.pop(pid)

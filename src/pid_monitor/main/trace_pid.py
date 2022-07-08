@@ -6,6 +6,7 @@ import sys
 from typing import List
 
 from pid_monitor._dt_mvc import PSUTIL_NOTFOUND_ERRORS
+from pid_monitor._dt_mvc.appender import load_table_appender_class, BaseTableAppender
 from pid_monitor._dt_mvc.frontend import show_frontend
 from pid_monitor._dt_mvc.pm_config import PMConfig
 from pid_monitor._dt_mvc.std_dispatcher import DispatcherController
@@ -13,18 +14,6 @@ from pid_monitor._dt_mvc.std_dispatcher.process_tracer_dispatcher import Process
 from pid_monitor._dt_mvc.std_dispatcher.system_tracer_dispatcher import SystemTracerDispatcherThread
 
 _LOG_HANDLER = logging.getLogger()
-
-
-def _initialize_registry(output_basename: str):
-    """Initialize process registry."""
-    with open(f"{output_basename}.reg.tsv", mode='a') as writer:
-        writer.write('\t'.join((
-            "TIME",
-            "PID",
-            "CMD",
-            "EXE",
-            "CWD"
-        )) + '\n')
 
 
 def _start_system_tracer_dispatcher(
@@ -43,10 +32,26 @@ def _start_system_tracer_dispatcher(
     return system_dispatcher_process
 
 
+def _create_registry_appender(pmc: PMConfig):
+    return load_table_appender_class(
+        pmc.table_appender_type
+    )(
+        filename=f"{pmc.output_basename}.reg",
+        header=[
+            "TIME",
+            "PID",
+            "CMD",
+            "EXE",
+            "CWD"
+        ]
+    )
+
+
 def _start_main_tracer_dispatcher(
         trace_pid: int,
         pmc: PMConfig,
-        dispatcher_controller: DispatcherController
+        dispatcher_controller: DispatcherController,
+        registry_appender: BaseTableAppender
 ) -> ProcessTracerDispatcherThread:
     """
     Start the main dispatcher over traced process. If failed, suicide.
@@ -55,7 +60,8 @@ def _start_main_tracer_dispatcher(
         main_dispatcher = ProcessTracerDispatcherThread(
             trace_pid=trace_pid,
             pmc=pmc,
-            dispatcher_controller=dispatcher_controller
+            dispatcher_controller=dispatcher_controller,
+            registry_appender=registry_appender
         )
     except PSUTIL_NOTFOUND_ERRORS:
         _LOG_HANDLER.error(f"Process pid={trace_pid} not found -- Maybe it is terminated?")
@@ -101,20 +107,22 @@ def trace_pid(
     except ValueError:  # Not main thread
         pass
 
-    _initialize_registry(pmc.output_basename)
     system_tracer_dispatcher = _start_system_tracer_dispatcher(
         pmc=pmc,
         dispatcher_controller=dispatcher_controller
     )
+    _registry_appender = _create_registry_appender(pmc)
     main_tracer_dispatcher = _start_main_tracer_dispatcher(
         trace_pid=pmc.toplevel_trace_pid,
         pmc=pmc,
-        dispatcher_controller=dispatcher_controller
+        dispatcher_controller=dispatcher_controller,
+        registry_appender=_registry_appender
     )
     show_frontend(
         pmc=pmc,
         dispatcher_controller=dispatcher_controller
     )
+    _registry_appender.close()
     dispatcher_controller.terminate_all_dispatchers(signal.SIGTERM)  # Send signal.SIGINT to all dispatchers
 
     main_tracer_dispatcher.join()

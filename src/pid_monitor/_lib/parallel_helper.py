@@ -24,7 +24,6 @@ class ParallelJobQueue(threading.Thread):
         self.running_job_queue = []
         self.refresh_interval = refresh_interval
 
-
     @property
     def all_finished(self) -> bool:
         return len(self.pending_job_queue) + len(self.running_job_queue) == 0

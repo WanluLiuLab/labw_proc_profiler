@@ -77,6 +77,7 @@ class BaseTracerThread(ThreadWithPMC):
                 )
                 return
             sleep(self.pmc.backend_refresh_interval)
+        self._appender.close()
 
     @abstractmethod
     def probe(self):
