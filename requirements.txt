@@ -11,4 +11,5 @@ pip~=22.1
 # PyQt5
 # matplotlib~=3.5.2
 fastparquet~=0.8.1
+tables~=3.7
 setuptools

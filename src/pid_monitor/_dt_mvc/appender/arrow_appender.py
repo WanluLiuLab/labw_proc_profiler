@@ -1,0 +1,46 @@
+"""
+Using arrow IPC format with one record per block.
+"""
+
+from typing import List, Optional
+
+import pandas as pd
+import pyarrow as pa
+
+from pid_monitor._dt_mvc.appender.typing import PandasDictBuffer, TableAppenderConfig
+
+
+class ArrowTableAppender(PandasDictBuffer):
+
+    def _get_n_lines_actually_written_hook(self) -> int:
+        return pa.ipc.open_stream(pa.OSFile(self._real_filename)).read_all().to_pandas().shape[0]
+
+    _schema: Optional[pa.Schema]
+    _file_handler: Optional[pa.RecordBatchStreamWriter]
+
+    def __init__(self, filename: str, header: List[str], tac: TableAppenderConfig):
+        super().__init__(filename, header, tac)
+        self._schema = None
+        self._file_handler = None
+
+    def _get_real_filename_hook(self):
+        self._real_filename = ".".join((self.filename, "arrow"))
+
+    def _create_file_hook(self):
+        pass
+
+    def _write_hook(self, df: pd.DataFrame):
+        record_batch = pa.record_batch(data=df)
+        if self._schema is None:
+            self._schema = record_batch.schema
+            self._file_handler = pa.ipc.new_stream(
+                sink=pa.OSFile(self._real_filename, mode="w"),
+                schema=record_batch.schema
+            )
+        self._file_handler.write_batch(record_batch)
+
+    def close(self):
+        super(ArrowTableAppender, self).close()
+        if self._file_handler is None:
+            return
+        self._file_handler.close()

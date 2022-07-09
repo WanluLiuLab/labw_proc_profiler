@@ -4,19 +4,21 @@ from typing import Type, Iterator, Tuple
 from pid_monitor._dt_mvc.appender.typing import BaseTableAppender
 
 POSSIBLE_APPENDER_PATHS = (
-    "pid_monitor._dt_mvc.appender.tsv",
-    "pid_monitor._dt_mvc.appender.csv",
-    "pid_monitor._dt_mvc.appender.arrow",
-    "pid_monitor._dt_mvc.appender.parquet",
-    "pid_monitor._dt_mvc.appender.dumb"
+    "pid_monitor._dt_mvc.appender.tsv_appender",
+    "pid_monitor._dt_mvc.appender.lzmatsv_appender",
+    "pid_monitor._dt_mvc.appender.arrow_appender",
+    "pid_monitor._dt_mvc.appender.dumb_appender",
+    "pid_monitor._dt_mvc.appender.hdf5_appender",
+    "pid_monitor._dt_mvc.appender.parquet_appender",
 )
 
 AVAILABLE_TABLE_APPENDERS = {
     "TSVTableAppender": 'TSVTableAppender',
-    "CSVTableAppender": 'CSVTableAppender',
+    "LZMATSVTableAppender": 'LZMATSVTableAppender',
     "ArrowTableAppender": 'ArrowTableAppender',
-    "ParquetTableAppender": 'ParquetTableAppender',
     "DumbTableAppender": 'DumbTableAppender',
+    "HDF5TableAppender": 'HDF5TableAppender',
+    "ParquetTableAppender": 'ParquetTableAppender',
 }
 
 
