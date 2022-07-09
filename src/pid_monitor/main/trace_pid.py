@@ -7,6 +7,7 @@ from typing import List
 
 from pid_monitor._dt_mvc import PSUTIL_NOTFOUND_ERRORS
 from pid_monitor._dt_mvc.appender import load_table_appender_class, BaseTableAppender
+from pid_monitor._dt_mvc.appender.typing import TableAppenderConfig
 from pid_monitor._dt_mvc.frontend import show_frontend
 from pid_monitor._dt_mvc.pm_config import PMConfig
 from pid_monitor._dt_mvc.std_dispatcher import DispatcherController
@@ -43,7 +44,10 @@ def _create_registry_appender(pmc: PMConfig):
             "CMD",
             "EXE",
             "CWD"
-        ]
+        ],
+        tac = TableAppenderConfig(
+            pmc.table_appender_buffer_size
+        )
     )
 
 

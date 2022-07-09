@@ -2,6 +2,7 @@ import psutil
 
 from pid_monitor._dt_mvc import DEFAULT_SYSTEM_INDICATOR_PID
 from pid_monitor._dt_mvc.appender import load_table_appender_class
+from pid_monitor._dt_mvc.appender.typing import TableAppenderConfig
 from pid_monitor._dt_mvc.frontend_cache.system_frontend_cache import SystemFrontendCache
 from pid_monitor._dt_mvc.pm_config import PMConfig
 from pid_monitor._dt_mvc.std_dispatcher import BaseTracerDispatcherThread, DispatcherController
@@ -54,7 +55,10 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
                 "OPTS",
                 "TOTAL",
                 "USED"
-            ]
+            ],
+                tac=TableAppenderConfig(
+                    self.pmc.table_appender_buffer_size
+                )
         )
         for item in psutil.disk_partitions():
             disk_usage = psutil.disk_usage(item.mountpoint)

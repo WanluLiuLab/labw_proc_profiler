@@ -19,7 +19,8 @@ DEFAULT_SYSTEM_LEVEL_TRACERS = [
     "SystemCPUTracerThread",
     "SystemSWAPTracerThread"
 ]
-DEFAULT_TABLE_APPENDER = "ParquetTableAppender"
+DEFAULT_TABLE_APPENDER = "LZMATSVTableAppender"
+DEFAULT_TABLE_APPENDER_BUFFER_SIZE = 100
 
 
 class PMConfig:
@@ -39,7 +40,8 @@ class PMConfig:
             system_level_tracers_to_load=None,
             process_level_tracer_to_load=None,
             frontend_refresh_interval: float = DEFAULT_FRONTEND_REFRESH_INTERVAL,
-            table_appender_type: str = DEFAULT_TABLE_APPENDER
+            table_appender_type: str = DEFAULT_TABLE_APPENDER,
+            table_appender_buffer_size: int=DEFAULT_TABLE_APPENDER_BUFFER_SIZE
     ):
         if output_basename is None:
             os.makedirs(f"pid_monitor_{toplevel_trace_pid}", exist_ok=True)
@@ -55,6 +57,7 @@ class PMConfig:
         self.process_level_tracer_to_load = process_level_tracer_to_load
         self.frontend_refresh_interval = frontend_refresh_interval
         self.table_appender_type = table_appender_type
+        self.table_appender_buffer_size = table_appender_buffer_size
 
     @classmethod
     def from_args(
@@ -76,7 +79,8 @@ class PMConfig:
             frontend_refresh_interval=parsed_args.frontend_refresh_interval,
             system_level_tracers_to_load=parsed_args.system_level_tracers_to_load,
             process_level_tracer_to_load=parsed_args.process_level_tracer_to_load,
-            table_appender_type=parsed_args.table_appender_type
+            table_appender_type=parsed_args.table_appender_type,
+            table_appender_buffer_size=parsed_args.table_appender_buffer_size
         )
         return newinstance
 
@@ -126,12 +130,19 @@ class PMConfig:
             default=DEFAULT_FRONTEND_REFRESH_INTERVAL
         )
         parser.add_argument(
-            "--appender",
+            "--table_appender_type",
             help="Manually specify table_appender_type",
             type=str,
             choices=list(AVAILABLE_TABLE_APPENDERS.keys()),
             required=False,
             default=DEFAULT_TABLE_APPENDER
+        )
+        parser.add_argument(
+            "--table_appender_buffer_size",
+            help="Manually specify table_appender_buffer_size",
+            type=int,
+            required=False,
+            default=DEFAULT_TABLE_APPENDER_BUFFER_SIZE
         )
 
         return parser

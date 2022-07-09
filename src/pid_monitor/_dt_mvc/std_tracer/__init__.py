@@ -15,6 +15,7 @@ import psutil
 
 from pid_monitor._dt_mvc import DEFAULT_SYSTEM_INDICATOR_PID, PSUTIL_NOTFOUND_ERRORS
 from pid_monitor._dt_mvc.appender import BaseTableAppender, load_table_appender_class
+from pid_monitor._dt_mvc.appender.typing import TableAppenderConfig
 from pid_monitor._dt_mvc.frontend_cache.process_frontend_cache import ProcessFrontendCache
 from pid_monitor._dt_mvc.frontend_cache.system_frontend_cache import SystemFrontendCache
 from pid_monitor._dt_mvc.pm_config import PMConfig
@@ -45,7 +46,10 @@ class BaseTracerThread(ThreadWithPMC):
             self.pmc.table_appender_type
         )(
             filename=filename,
-            header=table_appender_header
+            header=table_appender_header,
+                tac=TableAppenderConfig(
+                    self.pmc.table_appender_buffer_size
+                )
         )
         self.log_handler.debug(f"Tracer for TRACE_PID={self.trace_pid} TYPE={self.tracer_type} added")
         self._post_inithook_hook()

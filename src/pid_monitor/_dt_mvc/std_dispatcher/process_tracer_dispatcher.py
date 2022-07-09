@@ -8,6 +8,7 @@ import psutil
 
 from pid_monitor._dt_mvc import PSUTIL_NOTFOUND_ERRORS
 from pid_monitor._dt_mvc.appender import BaseTableAppender, load_table_appender_class
+from pid_monitor._dt_mvc.appender.typing import TableAppenderConfig
 from pid_monitor._dt_mvc.frontend_cache.process_frontend_cache import ProcessFrontendCache
 from pid_monitor._dt_mvc.pm_config import PMConfig
 from pid_monitor._dt_mvc.std_dispatcher import BaseTracerDispatcherThread, DispatcherController
@@ -96,7 +97,8 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         except PSUTIL_NOTFOUND_ERRORS as e:
             self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             self._dispatcher_controller.remove_dispatcher(self.trace_pid)
-            raise e
+            self.sigterm()
+            return
 
         self._frontend_cache = ProcessFrontendCache(
             name=name,
@@ -150,7 +152,10 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         try:
             appender = load_table_appender_class(self.pmc.table_appender_type)(
                 filename=f"{self.pmc.output_basename}.{self.trace_pid}.env",
-                header=["NAME", "VALUE"]
+                header=["NAME", "VALUE"],
+                tac=TableAppenderConfig(
+                    self.pmc.table_appender_buffer_size
+                )
             )
             for env_name, env_value in self.process.environ().items():
                 appender.append([env_name, env_value])
@@ -168,7 +173,10 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         try:
             appender = load_table_appender_class(self.pmc.table_appender_type)(
                 filename=f"{self.pmc.output_basename}.{self.trace_pid}.mapfile",
-                header=["PATH", "RESIDENT", "VIRT", "SWAP"]
+                header=["PATH", "RESIDENT", "VIRT", "SWAP"],
+                tac=TableAppenderConfig(
+                    self.pmc.table_appender_buffer_size
+                )
             )
             for item in self.process.memory_maps():
                 appender.append([

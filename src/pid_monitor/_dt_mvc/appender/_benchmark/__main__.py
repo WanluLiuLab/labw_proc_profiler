@@ -65,7 +65,7 @@ def bench_multithread(
     ])
 
 
-if __name__ == '__main__':
+def bench_main():
     try:
         os.remove("bench_result.tsv")
     except FileNotFoundError:
@@ -89,3 +89,32 @@ if __name__ == '__main__':
                     )
         print(f"Benchmarking {appender_class_name} FIN")
     final_result_appender.close()
+
+def test_bench():
+    try:
+        os.remove("bench_result.tsv")
+    except FileNotFoundError:
+        pass
+    final_result_appender = load_table_appender_class("TSVTableAppender")(
+        "bench_result",
+        ["APPENDER_CLASS_NAME", "THREAD_NUM", "BUFF_SIZE", "RUN_ID", "TIME_SPENT"],
+        TableAppenderConfig(1)
+    )
+    for appender_class_name in AVAILABLE_TABLE_APPENDERS:
+        for thread_num in [1, 3]:
+            for buffer_size in [1, 3]:
+                desc = f"{appender_class_name}: threads={thread_num}, buffer={buffer_size}"
+                for run_id in tqdm.tqdm(range(3), desc=desc):
+                    bench_multithread(
+                        appender_class_name,
+                        thread_num,
+                        run_id,
+                        final_result_appender,
+                        TableAppenderConfig(buffer_size)
+                    )
+        print(f"Benchmarking {appender_class_name} FIN")
+    final_result_appender.close()
+
+
+if __name__ == '__main__':
+    test_bench()

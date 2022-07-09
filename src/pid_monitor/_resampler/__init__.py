@@ -3,23 +3,18 @@ WARNING! This file is subject to change.
 """
 
 import glob
-import logging
 import math
 import multiprocessing
 import os
 import queue
 import re
+import logging
 from typing import Tuple, Optional, List
 
 import pandas as pd
-import pyarrow as pa
 import tqdm
 
 from pid_monitor._lib import parallel_helper
-
-
-def read_arrow(path: str) -> pd.DataFrame:
-    return pa.ipc.open_stream(pa.OSFile(path)).read_all().to_pandas()
 
 
 def get_first_and_last_timestamp_from_a_file(path: str) -> Optional[Tuple[float, float]]:
@@ -27,15 +22,16 @@ def get_first_and_last_timestamp_from_a_file(path: str) -> Optional[Tuple[float,
     _lh.debug(f"Parsing {path}")
     retd_start = None
     retd_end = None
+    df: pd.DataFrame
     try:
-        for df in pa.ipc.open_stream(pa.OSFile(path)):
+        for df in pd.read_table(path, chunksize=1000):
             if retd_start is None:
-                retd_start = df['TIME'][0].as_py()
-            retd_end = df['TIME'][0].as_py()
+                retd_start = df['TIME'].iloc[0]
+            retd_end = df['TIME'].iloc[-1]
     except (KeyError, IndexError) as e:
         _lh.error(f"Parsing {path} error: {e} File is empty?")
         return None
-    except (pd.errors.ParserError, pa.ArrowInvalid) as e:
+    except pd.errors.ParserError as e:
         _lh.error(f"Parsing {path} error: {e}")
         return None
     if retd_start is not None:
@@ -216,14 +212,14 @@ def parallel_resample(
             self.keepfield.append("TIME")
 
         def run(self) -> None:
-            df = read_arrow(self.path)
+            df = pd.read_csv(self.path, delimiter="\t", engine="pyarrow")
             for field in df.columns:
                 if field not in self.keepfield:
                     df = df.drop(field, axis=1)
             (
                 BaseResampler(self.rsc)
                 .resample(df)
-                .to_parquet(self.path.replace(".arrow", ".resampled.parquet"))
+                .to_parquet(self.path.replace(".tsv.xz", ".resampled.parquet"))
             )
 
     files_needed_to_be_parsed = list(glob.glob(os.path.join(output_basename, file_mask)))
@@ -236,16 +232,16 @@ def parallel_resample(
     pool.join()
 
 
-def total_process(output_basename: str):
+def total_process(output_basename:str):
     # print(output_basename)
     rsc = ResamplerConfig.from_dir(
         output_basename=output_basename,
         interval=1,
         round_to_demical=0,
-        file_mask="*.arrow"
+        file_mask="*.tsv.xz"
     )
-    parallel_resample(output_basename, rsc, "*.mem.arrow", keepfield=["VIRT", "DATA"])
-    parallel_resample(output_basename, rsc, "*.cpu.arrow", keepfield=["CPU_PERCENT"])
+    parallel_resample(output_basename, rsc, "*.mem.tsv.xz", keepfield=["VIRT", "DATA"])
+    parallel_resample(output_basename, rsc, "*.cpu.tsv.xz", keepfield=["CPU_PERCENT"])
     full_df_mem = aggregate_using_sum(output_basename, "*.mem.resampled.parquet")
     full_df_cpu = aggregate_using_sum(output_basename, "*.cpu.resampled.parquet")
     full_df = full_df_mem.join(full_df_cpu, on="TIME", lsuffix="_L", rsuffix="_R")
@@ -254,10 +250,11 @@ def total_process(output_basename: str):
     full_df.to_csv(os.path.join(output_basename, "final.csv"))
 
 
+
 if __name__ == '__main__':
     pool = parallel_helper.ParallelJobQueue()
     for output_basename in (
-            '/home/yuzj/Documents/gpmf/opt/proc_profiler/src/pid_monitor/_test/proc_profiler_test',
+            '/home/yuzj/Documents/gpmf/opt/proc_profiler/src/pid_monitor/_test/proc_profiler_dd_xz_test',
             # '/home/yuzj/Desktop/profiler/flair_profile/',
             # '/home/yuzj/Desktop/profiler/freddie_profile/',
             # '/home/yuzj/Desktop/profiler/NanoAsPipe_profile/',
@@ -265,9 +262,9 @@ if __name__ == '__main__':
             # '/home/yuzj/Desktop/profiler/Tama_profile/',
             # '/home/yuzj/Desktop/profiler/unagi_profile/'
     ):
-        pool.append(multiprocessing.Process(target=total_process, kwargs={"output_basename": output_basename}))
+        pool.append(multiprocessing.Process(target=total_process, kwargs={"output_basename":output_basename}))
     pool.start()
     pool.join()
-    # print(full_df.head())
-    # sns.lineplot(data=full_df).get_figure().savefig(os.path.join(output_basename, "final_aggregated_mem.png"))
-    # print(os.path.join(output_basename, "final_aggregated_mem.png"))
+        # print(full_df.head())
+        # sns.lineplot(data=full_df).get_figure().savefig(os.path.join(output_basename, "final_aggregated_mem.png"))
+        # print(os.path.join(output_basename, "final_aggregated_mem.png"))

@@ -13,10 +13,10 @@ POSSIBLE_APPENDER_PATHS = (
 )
 
 AVAILABLE_TABLE_APPENDERS = {
+    "DumbTableAppender": 'DumbTableAppender',
     "TSVTableAppender": 'TSVTableAppender',
     "LZMATSVTableAppender": 'LZMATSVTableAppender',
-    "ArrowTableAppender": 'ArrowTableAppender',
-    "DumbTableAppender": 'DumbTableAppender',
+#    "ArrowTableAppender": 'ArrowTableAppender', # bugs
     "HDF5TableAppender": 'HDF5TableAppender',
     "ParquetTableAppender": 'ParquetTableAppender',
 }
