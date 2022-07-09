@@ -24,6 +24,8 @@
       <excludeFolder url="file://$MODULE_DIR$/src/proc_profiler/proc_profiler_test" />
       <excludeFolder url="file://$MODULE_DIR$/fio_data" />
       <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_test" />
+      <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_dd_xz_test" />
+      <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_fast_fork_test" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

@@ -28,6 +28,8 @@ POSSIBLE_TRACER_PATHS = (
     "pid_monitor._dt_mvc.std_tracer.system_cpu_tracer_thread",
     "pid_monitor._dt_mvc.std_tracer.system_mem_tracer_thread",
     "pid_monitor._dt_mvc.std_tracer.system_swap_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.system_concurrent_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.process_nfd_tracer_thread"
 )
 
 _PROCESS_TABLE_COL_NAMES = (

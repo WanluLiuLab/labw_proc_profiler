@@ -12,12 +12,14 @@ DEFAULT_PROCESS_LEVEL_TRACERS = [
     "ProcessMEMTracerThread",
     "ProcessChildTracerThread",
     "ProcessCPUTracerThread",
-    "ProcessSTATTracerThread"
+    "ProcessSTATTracerThread",
+    "ProcessNFDTracerThread"
 ]
 DEFAULT_SYSTEM_LEVEL_TRACERS = [
     "SystemMEMTracerThread",
     "SystemCPUTracerThread",
-    "SystemSWAPTracerThread"
+    "SystemSWAPTracerThread",
+    "SystemConcurrentTracerThread"
 ]
 DEFAULT_TABLE_APPENDER = "LZMATSVTableAppender"
 DEFAULT_TABLE_APPENDER_BUFFER_SIZE = 100
