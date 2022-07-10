@@ -56,9 +56,9 @@ class SystemTracerDispatcherThread(BaseTracerDispatcherThread):
                 "TOTAL",
                 "USED"
             ],
-                tac=TableAppenderConfig(
-                    self.pmc.table_appender_buffer_size
-                )
+            tac=TableAppenderConfig(
+                self.pmc.table_appender_buffer_size
+            )
         )
         for item in psutil.disk_partitions():
             disk_usage = psutil.disk_usage(item.mountpoint)

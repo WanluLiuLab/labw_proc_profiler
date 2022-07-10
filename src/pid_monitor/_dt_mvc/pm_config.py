@@ -43,7 +43,7 @@ class PMConfig:
             process_level_tracer_to_load=None,
             frontend_refresh_interval: float = DEFAULT_FRONTEND_REFRESH_INTERVAL,
             table_appender_type: str = DEFAULT_TABLE_APPENDER,
-            table_appender_buffer_size: int=DEFAULT_TABLE_APPENDER_BUFFER_SIZE
+            table_appender_buffer_size: int = DEFAULT_TABLE_APPENDER_BUFFER_SIZE
     ):
         if output_basename is None:
             os.makedirs(f"pid_monitor_{toplevel_trace_pid}", exist_ok=True)

@@ -45,7 +45,7 @@ def _create_registry_appender(pmc: PMConfig):
             "EXE",
             "CWD"
         ],
-        tac = TableAppenderConfig(
+        tac=TableAppenderConfig(
             pmc.table_appender_buffer_size
         )
     )

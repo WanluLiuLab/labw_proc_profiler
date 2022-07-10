@@ -3,6 +3,7 @@ import os
 import random
 import string
 import time
+from typing import Iterable
 
 import tqdm
 
@@ -65,7 +66,7 @@ def bench_multithread(
     ])
 
 
-def bench_main():
+def bench(thread_nums: Iterable[int], buffer_sizes: Iterable[int]):
     try:
         os.remove("bench_result.tsv")
     except FileNotFoundError:
@@ -76,8 +77,8 @@ def bench_main():
         TableAppenderConfig(1)
     )
     for appender_class_name in AVAILABLE_TABLE_APPENDERS:
-        for thread_num in range(1, 2 * multiprocessing.cpu_count() + 1, 10):
-            for buffer_size in [1, 4, 16, 64, 256, 1024]:
+        for thread_num in thread_nums:
+            for buffer_size in buffer_sizes:
                 desc = f"{appender_class_name}: threads={thread_num}, buffer={buffer_size}"
                 for run_id in tqdm.tqdm(range(40), desc=desc):
                     bench_multithread(
@@ -90,31 +91,13 @@ def bench_main():
         print(f"Benchmarking {appender_class_name} FIN")
     final_result_appender.close()
 
-def test_bench():
-    try:
-        os.remove("bench_result.tsv")
-    except FileNotFoundError:
-        pass
-    final_result_appender = load_table_appender_class("TSVTableAppender")(
-        "bench_result",
-        ["APPENDER_CLASS_NAME", "THREAD_NUM", "BUFF_SIZE", "RUN_ID", "TIME_SPENT"],
-        TableAppenderConfig(1)
-    )
-    for appender_class_name in AVAILABLE_TABLE_APPENDERS:
-        for thread_num in [1, 3]:
-            for buffer_size in [1, 3]:
-                desc = f"{appender_class_name}: threads={thread_num}, buffer={buffer_size}"
-                for run_id in tqdm.tqdm(range(3), desc=desc):
-                    bench_multithread(
-                        appender_class_name,
-                        thread_num,
-                        run_id,
-                        final_result_appender,
-                        TableAppenderConfig(buffer_size)
-                    )
-        print(f"Benchmarking {appender_class_name} FIN")
-    final_result_appender.close()
-
 
 if __name__ == '__main__':
-    test_bench()
+    bench(
+        [1, 3],
+        [1, 3]
+    )
+    bench(
+        range(1, 2 * multiprocessing.cpu_count() + 1, 10),
+        [1, 4, 16, 64, 256, 1024]
+    )

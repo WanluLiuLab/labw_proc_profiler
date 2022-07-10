@@ -1,2 +1,2 @@
 test.*
-bench_result.tsv
+_benchmark/bench_result.tsv

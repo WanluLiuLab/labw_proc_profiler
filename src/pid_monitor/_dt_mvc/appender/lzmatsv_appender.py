@@ -1,7 +1,5 @@
 import lzma
 
-import pandas as pd
-
 from pid_monitor._dt_mvc.appender.tsv_appender import TSVTableAppender
 
 

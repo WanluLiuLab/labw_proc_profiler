@@ -47,9 +47,9 @@ class BaseTracerThread(ThreadWithPMC):
         )(
             filename=filename,
             header=table_appender_header,
-                tac=TableAppenderConfig(
-                    self.pmc.table_appender_buffer_size
-                )
+            tac=TableAppenderConfig(
+                self.pmc.table_appender_buffer_size
+            )
         )
         self.log_handler.debug(f"Tracer for TRACE_PID={self.trace_pid} TYPE={self.tracer_type} added")
         self._post_inithook_hook()

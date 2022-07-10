@@ -16,7 +16,7 @@ AVAILABLE_TABLE_APPENDERS = {
     "DumbTableAppender": 'DumbTableAppender',
     "TSVTableAppender": 'TSVTableAppender',
     "LZMATSVTableAppender": 'LZMATSVTableAppender',
-#    "ArrowTableAppender": 'ArrowTableAppender', # bugs
+    #    "ArrowTableAppender": 'ArrowTableAppender', # bugs
     "HDF5TableAppender": 'HDF5TableAppender',
     "ParquetTableAppender": 'ParquetTableAppender',
 }

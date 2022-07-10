@@ -35,7 +35,7 @@ class BaseTableAppender:
     def _get_n_lines_actually_written_hook(self) -> int:
         pass
 
-    def validate_lines(self, required_number_of_lines:int) -> None:
+    def validate_lines(self, required_number_of_lines: int) -> None:
         actual_number_of_lines = self._get_n_lines_actually_written_hook()
         if actual_number_of_lines != required_number_of_lines:
             raise AssertionError(

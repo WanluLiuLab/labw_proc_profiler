@@ -3,12 +3,12 @@ WARNING! This file is subject to change.
 """
 
 import glob
+import logging
 import math
 import multiprocessing
 import os
 import queue
 import re
-import logging
 from typing import Tuple, Optional, List
 
 import pandas as pd
@@ -232,7 +232,7 @@ def parallel_resample(
     pool.join()
 
 
-def total_process(output_basename:str):
+def total_process(output_basename: str):
     # print(output_basename)
     rsc = ResamplerConfig.from_dir(
         output_basename=output_basename,
@@ -250,7 +250,6 @@ def total_process(output_basename:str):
     full_df.to_csv(os.path.join(output_basename, "final.csv"))
 
 
-
 if __name__ == '__main__':
     pool = parallel_helper.ParallelJobQueue()
     for output_basename in (
@@ -262,9 +261,9 @@ if __name__ == '__main__':
             # '/home/yuzj/Desktop/profiler/Tama_profile/',
             # '/home/yuzj/Desktop/profiler/unagi_profile/'
     ):
-        pool.append(multiprocessing.Process(target=total_process, kwargs={"output_basename":output_basename}))
+        pool.append(multiprocessing.Process(target=total_process, kwargs={"output_basename": output_basename}))
     pool.start()
     pool.join()
-        # print(full_df.head())
-        # sns.lineplot(data=full_df).get_figure().savefig(os.path.join(output_basename, "final_aggregated_mem.png"))
-        # print(os.path.join(output_basename, "final_aggregated_mem.png"))
+    # print(full_df.head())
+    # sns.lineplot(data=full_df).get_figure().savefig(os.path.join(output_basename, "final_aggregated_mem.png"))
+    # print(os.path.join(output_basename, "final_aggregated_mem.png"))
