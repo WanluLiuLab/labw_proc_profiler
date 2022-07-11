@@ -7,7 +7,7 @@ from typing import Iterable
 
 import tqdm
 
-from pid_monitor._dt_mvc.appender import load_table_appender_class, BaseTableAppender, AVAILABLE_TABLE_APPENDERS
+from pid_monitor._dt_mvc.appender import load_table_appender_class, BaseTableAppender
 from pid_monitor._dt_mvc.appender.typing import TableAppenderConfig
 
 
@@ -41,7 +41,7 @@ def bench_multithread(
 
     appender = load_table_appender_class(_appender_class_name)(
         "test",
-        ["INDEX", "RAND_FLOAT", "RAND_STR", "RAND_INT", "TIME"],
+        ["ID", "RAND_FLOAT", "RAND_STR", "RAND_INT", "TIME"],
         tac
     )
     ts = time.time()
@@ -76,7 +76,7 @@ def bench(thread_nums: Iterable[int], buffer_sizes: Iterable[int]):
         ["APPENDER_CLASS_NAME", "THREAD_NUM", "BUFF_SIZE", "RUN_ID", "TIME_SPENT"],
         TableAppenderConfig(1)
     )
-    for appender_class_name in AVAILABLE_TABLE_APPENDERS:
+    for appender_class_name in ["SQLite3TableAppender"]:
         for thread_num in thread_nums:
             for buffer_size in buffer_sizes:
                 desc = f"{appender_class_name}: threads={thread_num}, buffer={buffer_size}"

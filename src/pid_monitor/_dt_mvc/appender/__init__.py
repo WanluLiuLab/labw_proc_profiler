@@ -11,6 +11,7 @@ POSSIBLE_APPENDER_PATHS = (
     "pid_monitor._dt_mvc.appender.dumb_appender",
     "pid_monitor._dt_mvc.appender.hdf5_appender",
     "pid_monitor._dt_mvc.appender.parquet_appender",
+    "pid_monitor._dt_mvc.appender.sqlite3_appender",
 )
 
 AVAILABLE_TABLE_APPENDERS = {
@@ -21,6 +22,7 @@ AVAILABLE_TABLE_APPENDERS = {
     #    "ArrowTableAppender": 'ArrowTableAppender', # bugs
     "HDF5TableAppender": 'HDF5TableAppender',
     "ParquetTableAppender": 'ParquetTableAppender',
+    "SQLite3TableAppender": 'SQLite3TableAppender'
 }
 
 

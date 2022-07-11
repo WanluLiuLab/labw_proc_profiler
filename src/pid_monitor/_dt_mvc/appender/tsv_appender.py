@@ -1,9 +1,9 @@
 import pandas as pd
 
-from pid_monitor._dt_mvc.appender.typing import DictBuffer
+from pid_monitor._dt_mvc.appender.typing import DictBufferAppender
 
 
-class TSVTableAppender(DictBuffer):
+class TSVTableAppender(DictBufferAppender):
 
     def _get_real_filename_hook(self):
         self._real_filename = ".".join((self.filename, "tsv"))

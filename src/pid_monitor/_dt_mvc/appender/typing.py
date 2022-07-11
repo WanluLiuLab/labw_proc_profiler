@@ -67,7 +67,7 @@ class BaseTableAppender:
         self.close()
 
 
-class DictBuffer(BaseTableAppender, ABC):
+class DictBufferAppender(BaseTableAppender, ABC):
     _h0: str
     _buff: Dict[str, List[Any]]
     _write_mutex: multiprocessing.Lock
@@ -115,7 +115,7 @@ class DictBuffer(BaseTableAppender, ABC):
             self._write_hook(df)
 
 
-class PandasDictBuffer(DictBuffer, ABC):
+class PandasDictBufferAppender(DictBufferAppender, ABC):
 
     def flush(self) -> pd.DataFrame:
         df = pd.DataFrame.from_dict(data=self._buff)

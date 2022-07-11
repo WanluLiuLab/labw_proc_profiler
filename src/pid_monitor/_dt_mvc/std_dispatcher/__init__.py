@@ -17,8 +17,6 @@ from pid_monitor._dt_mvc.pm_config import PMConfig, POSSIBLE_TRACER_PATHS
 from pid_monitor._dt_mvc.std_tracer import BaseTracerThread
 from pid_monitor._dt_mvc.typing import ThreadWithPMC
 
-
-
 _PROCESS_TABLE_COL_NAMES = (
     'PID',
     'PPID',

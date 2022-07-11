@@ -3,7 +3,7 @@ import time
 
 import psutil
 
-from pid_monitor._dt_mvc import appender, PSUTIL_NOTFOUND_ERRORS
+from pid_monitor._dt_mvc import PSUTIL_NOTFOUND_ERRORS
 from pid_monitor._dt_mvc.appender import BaseTableAppender
 from pid_monitor._dt_mvc.frontend_cache.process_frontend_cache import ProcessFrontendCache
 from pid_monitor._dt_mvc.pm_config import PMConfig

@@ -38,6 +38,7 @@ POSSIBLE_TRACER_PATHS = (
     "pid_monitor._dt_mvc.std_tracer.process_nfd_tracer_thread"
 )
 
+
 class PMConfig:
     output_basename: str
     backend_refresh_interval: float

@@ -3,10 +3,10 @@ import os
 import fastparquet as fp
 import pandas as pd
 
-from pid_monitor._dt_mvc.appender.typing import PandasDictBuffer
+from pid_monitor._dt_mvc.appender.typing import PandasDictBufferAppender
 
 
-class ParquetTableAppender(PandasDictBuffer):
+class ParquetTableAppender(PandasDictBufferAppender):
 
     def _get_n_lines_actually_written_hook(self) -> int:
         return pd.read_parquet(self._real_filename).shape[0]

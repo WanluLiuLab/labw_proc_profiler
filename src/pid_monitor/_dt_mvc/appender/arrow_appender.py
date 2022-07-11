@@ -9,10 +9,10 @@ from typing import List, Optional
 import pandas as pd
 import pyarrow as pa
 
-from pid_monitor._dt_mvc.appender.typing import TableAppenderConfig, DictBuffer
+from pid_monitor._dt_mvc.appender.typing import TableAppenderConfig, DictBufferAppender
 
 
-class ArrowTableAppender(DictBuffer):
+class ArrowTableAppender(DictBufferAppender):
     _schema: Optional[pa.Schema]
     _file_handler: Optional[pa.RecordBatchStreamWriter]
 
