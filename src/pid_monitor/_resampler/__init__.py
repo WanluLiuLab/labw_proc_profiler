@@ -219,7 +219,7 @@ def parallel_resample(
             (
                 BaseResampler(self.rsc)
                 .resample(df)
-                .to_parquet(self.path.replace(".tsv.xz", ".resampled.parquet"))
+                .to_parquet(self.path.replace(".tsv.gz", ".resampled.parquet"))
             )
 
     files_needed_to_be_parsed = list(glob.glob(os.path.join(output_basename, file_mask)))
@@ -238,14 +238,14 @@ def total_process(output_basename: str):
         output_basename=output_basename,
         interval=1,
         round_to_demical=0,
-        file_mask="*.tsv.xz"
+        file_mask="*.tsv.gz"
     )
-    parallel_resample(output_basename, rsc, "*.mem.tsv.xz", keepfield=["VIRT", "DATA"])
-    parallel_resample(output_basename, rsc, "*.cpu.tsv.xz", keepfield=["CPU_PERCENT"])
+    parallel_resample(output_basename, rsc, "*.mem.tsv.gz", keepfield=["VIRT", "DATA"])
+    parallel_resample(output_basename, rsc, "*.cpu.tsv.gz", keepfield=["CPU_PERCENT"])
     full_df_mem = aggregate_using_sum(output_basename, "*.mem.resampled.parquet")
     full_df_cpu = aggregate_using_sum(output_basename, "*.cpu.resampled.parquet")
     full_df = full_df_mem.join(full_df_cpu, on="TIME", lsuffix="_L", rsuffix="_R")
-    full_df["NPROC"] = full_df[[f"NPROC_L", f"NPROC_R"]].mean(axis=1)
+    full_df["NPROC"] = full_df[[f"NPROC_L", f"NPROC_R"]].max(axis=1)
     full_df = full_df.drop([f"NPROC_R", f"NPROC_L"], axis=1)
     full_df.to_csv(os.path.join(output_basename, "final.csv"))
 

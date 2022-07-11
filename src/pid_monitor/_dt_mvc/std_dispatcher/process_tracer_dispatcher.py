@@ -73,10 +73,12 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         self._registry_appender = registry_appender
 
     def _update_last_cpu_time(self):
+        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: update CPUTIME")
         self._cached_last_cpu_time = get_total_cpu_time(self.process)
         self._frontend_cache.cpu_time = self._cached_last_cpu_time
         with open(f"{self.pmc.output_basename}.{self.trace_pid}.cputime", mode='w') as writer:
             writer.write(str(self._cached_last_cpu_time) + '\n')
+        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: update CPUTIMEV SUCCESS")
 
     def run_body(self):
         """
@@ -95,7 +97,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
             self._write_env()
             self._write_mapfile()
         except PSUTIL_NOTFOUND_ERRORS as e:
-            self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
+            self.log_handler.error(f"DISPATCHEE={self.trace_pid}: {e.__class__.__name__} encountered!")
             self._dispatcher_controller.remove_dispatcher(self.trace_pid)
             self.sigterm()
             return
@@ -109,9 +111,15 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
             self.trace_pid,
             self._frontend_cache
         )
-        self.start_tracers(
-            self.pmc.process_level_tracer_to_load
-        )
+        try:
+            self.start_tracers(
+                self.pmc.process_level_tracer_to_load
+            )
+        except PSUTIL_NOTFOUND_ERRORS as e:
+            self.log_handler.error(f"DISPATCHEE={self.trace_pid}: {e.__class__.__name__} encountered!")
+            self._dispatcher_controller.remove_dispatcher(self.trace_pid)
+            self.sigterm()
+            return
         while not self.should_exit:
             try:
                 with _DISPATCHER_MUTEX:
@@ -131,17 +139,15 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         - Executable path
         - Current working directory
         """
-        try:
-            self._registry_appender.append([
-                self.get_timestamp(),
-                self.trace_pid,
-                " ".join(self.process.cmdline()),
-                self.process.exe(),
-                self.process.cwd()
-            ])
-        except PSUTIL_NOTFOUND_ERRORS as e:
-            self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
-            raise e
+        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: writing registry")
+        self._registry_appender.append([
+            self.get_timestamp(),
+            self.trace_pid,
+            " ".join(self.process.cmdline()),
+            self.process.exe(),
+            self.process.cwd()
+        ])
+        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: writing registry SUCCESS")
 
     def _write_env(self):
         """
@@ -149,20 +155,18 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
 
         If the process changes its environment variable during execution, it will NOT be recorded!
         """
-        try:
-            appender = load_table_appender_class(self.pmc.table_appender_type)(
-                filename=f"{self.pmc.output_basename}.{self.trace_pid}.env",
-                header=["NAME", "VALUE"],
-                tac=TableAppenderConfig(
-                    self.pmc.table_appender_buffer_size
-                )
+        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: writing ENV")
+        appender = load_table_appender_class(self.pmc.table_appender_type)(
+            filename=f"{self.pmc.output_basename}.{self.trace_pid}.env",
+            header=["NAME", "VALUE"],
+            tac=TableAppenderConfig(
+                self.pmc.table_appender_buffer_size
             )
-            for env_name, env_value in self.process.environ().items():
-                appender.append([env_name, env_value])
-            appender.close()
-        except PSUTIL_NOTFOUND_ERRORS as e:
-            self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
-            raise e
+        )
+        for env_name, env_value in self.process.environ().items():
+            appender.append([env_name, env_value])
+        appender.close()
+        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: writing ENV SUCCESS")
 
     def _write_mapfile(self):
         """
@@ -170,42 +174,39 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
 
         Mapfile information shows how files, especially libraries are stored in memory.
         """
-        try:
-            appender = load_table_appender_class(self.pmc.table_appender_type)(
-                filename=f"{self.pmc.output_basename}.{self.trace_pid}.mapfile",
-                header=["PATH", "RESIDENT", "VIRT", "SWAP"],
-                tac=TableAppenderConfig(
-                    self.pmc.table_appender_buffer_size
-                )
+        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: writing MAPFILE")
+        appender = load_table_appender_class(self.pmc.table_appender_type)(
+            filename=f"{self.pmc.output_basename}.{self.trace_pid}.mapfile",
+            header=["PATH", "RESIDENT", "VIRT", "SWAP"],
+            tac=TableAppenderConfig(
+                self.pmc.table_appender_buffer_size
             )
-            for item in self.process.memory_maps():
-                appender.append([
-                    item.path,
-                    item.rss,
-                    item.size,
-                    item.swap
-                ])
-            appender.close()
-        except PSUTIL_NOTFOUND_ERRORS as e:
-            self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
-            raise e
+        )
+        for item in self.process.memory_maps():
+            appender.append([
+                item.path,
+                item.rss,
+                item.size,
+                item.swap
+            ])
+        appender.close()
+        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: writing MAPFILE SUCCESS")
 
     def _detect_process(self):
         """
         Detect and start child process dispatcher.
         """
-        try:
-            for process in self.process.children():
-                if process.pid not in self._dispatcher_controller.get_current_active_pids():
-                    self.log_handler.info(f"Sub-process {process.pid} detected.")
-                    new_thread = ProcessTracerDispatcherThread(
-                        trace_pid=process.pid,
-                        pmc=self.pmc,
-                        dispatcher_controller=self._dispatcher_controller,
-                        registry_appender=self._registry_appender
-                    )
-                    new_thread.start()
-                    self.append_threadpool(new_thread)
-        except PSUTIL_NOTFOUND_ERRORS as e:
-            self.log_handler.error(f"TRACEE={self.trace_pid}: {e.__class__.__name__} encountered!")
-            raise e
+        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: DETECT PROCESS")
+        for process in self.process.children():
+            if process.pid not in self._dispatcher_controller.get_current_active_pids():
+                self.log_handler.info(
+                    f"DISPATCHEE={self.trace_pid}: DETECT PROCESS: Sub-process {process.pid} detected.")
+                new_thread = ProcessTracerDispatcherThread(
+                    trace_pid=process.pid,
+                    pmc=self.pmc,
+                    dispatcher_controller=self._dispatcher_controller,
+                    registry_appender=self._registry_appender
+                )
+                new_thread.start()
+                self.append_threadpool(new_thread)
+        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: DETECT PROCESS SUCCESS")

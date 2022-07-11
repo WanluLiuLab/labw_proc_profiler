@@ -6,6 +6,7 @@ from pid_monitor._dt_mvc.appender.typing import BaseTableAppender
 POSSIBLE_APPENDER_PATHS = (
     "pid_monitor._dt_mvc.appender.tsv_appender",
     "pid_monitor._dt_mvc.appender.lzmatsv_appender",
+    "pid_monitor._dt_mvc.appender.lz77tsv_appender",
     "pid_monitor._dt_mvc.appender.arrow_appender",
     "pid_monitor._dt_mvc.appender.dumb_appender",
     "pid_monitor._dt_mvc.appender.hdf5_appender",
@@ -16,6 +17,7 @@ AVAILABLE_TABLE_APPENDERS = {
     "DumbTableAppender": 'DumbTableAppender',
     "TSVTableAppender": 'TSVTableAppender',
     "LZMATSVTableAppender": 'LZMATSVTableAppender',
+    "LZ77TSVTableAppender": 'LZ77TSVTableAppender',
     #    "ArrowTableAppender": 'ArrowTableAppender', # bugs
     "HDF5TableAppender": 'HDF5TableAppender',
     "ParquetTableAppender": 'ParquetTableAppender',

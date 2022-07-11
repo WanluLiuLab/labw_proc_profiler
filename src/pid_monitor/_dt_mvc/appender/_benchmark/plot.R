@@ -7,7 +7,7 @@ p <- ggplot(df, aes(x=THREAD_NUM, y=TIME_SPENT)) +
     stat_summary(fun = mean, color="red", geom="line") +
     facet_grid(APPENDER_CLASS_NAME~BUFF_SIZE, scales = "free_y") +
     theme_bw()
-ggsave("a.png", p, width=10, height=8)
+ggsave("a.png", p, width=10, height=16)
 
 p <- ggplot(df, aes(x=THREAD_NUM, y=TIME_SPENT)) +
     stat_summary(aes(color=APPENDER_CLASS_NAME),fun = mean, geom="line") +

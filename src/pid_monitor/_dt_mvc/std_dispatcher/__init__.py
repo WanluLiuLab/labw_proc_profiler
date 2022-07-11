@@ -13,24 +13,11 @@ import prettytable
 from pid_monitor._dt_mvc import DEFAULT_SYSTEM_INDICATOR_PID
 from pid_monitor._dt_mvc.frontend_cache.process_frontend_cache import ProcessFrontendCache
 from pid_monitor._dt_mvc.frontend_cache.system_frontend_cache import SystemFrontendCache
-from pid_monitor._dt_mvc.pm_config import PMConfig
+from pid_monitor._dt_mvc.pm_config import PMConfig, POSSIBLE_TRACER_PATHS
 from pid_monitor._dt_mvc.std_tracer import BaseTracerThread
 from pid_monitor._dt_mvc.typing import ThreadWithPMC
 
-POSSIBLE_TRACER_PATHS = (
-    "pid_monitor._dt_mvc.std_tracer.process_child_tracer_thread",
-    "pid_monitor._dt_mvc.std_tracer.process_cpu_tracer_thread",
-    "pid_monitor._dt_mvc.std_tracer.process_fd_tracer_thread",
-    "pid_monitor._dt_mvc.std_tracer.process_io_tracer_thread",
-    "pid_monitor._dt_mvc.std_tracer.process_mem_tracer_thread",
-    "pid_monitor._dt_mvc.std_tracer.process_stat_tracer_thread",
-    #    "pid_monitor._dt_mvc.std_tracer.process_syscall_tracer_thread",
-    "pid_monitor._dt_mvc.std_tracer.system_cpu_tracer_thread",
-    "pid_monitor._dt_mvc.std_tracer.system_mem_tracer_thread",
-    "pid_monitor._dt_mvc.std_tracer.system_swap_tracer_thread",
-    "pid_monitor._dt_mvc.std_tracer.system_concurrent_tracer_thread",
-    "pid_monitor._dt_mvc.std_tracer.process_nfd_tracer_thread"
-)
+
 
 _PROCESS_TABLE_COL_NAMES = (
     'PID',

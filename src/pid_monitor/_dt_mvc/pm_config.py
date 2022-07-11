@@ -19,11 +19,24 @@ DEFAULT_SYSTEM_LEVEL_TRACERS = [
     "SystemMEMTracerThread",
     "SystemCPUTracerThread",
     "SystemSWAPTracerThread",
-    "SystemConcurrentTracerThread"
+    #    "SystemConcurrentTracerThread"
 ]
-DEFAULT_TABLE_APPENDER = "LZMATSVTableAppender"
-DEFAULT_TABLE_APPENDER_BUFFER_SIZE = 100
-
+DEFAULT_TABLE_APPENDER = "LZ77TSVTableAppender"
+DEFAULT_TABLE_APPENDER_BUFFER_SIZE = 16
+POSSIBLE_TRACER_PATHS = (
+    "pid_monitor._dt_mvc.std_tracer.process_child_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.process_cpu_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.process_fd_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.process_io_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.process_mem_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.process_stat_tracer_thread",
+    # "pid_monitor._dt_mvc.std_tracer.process_syscall_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.system_cpu_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.system_mem_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.system_swap_tracer_thread",
+    # "pid_monitor._dt_mvc.std_tracer.system_concurrent_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.process_nfd_tracer_thread"
+)
 
 class PMConfig:
     output_basename: str

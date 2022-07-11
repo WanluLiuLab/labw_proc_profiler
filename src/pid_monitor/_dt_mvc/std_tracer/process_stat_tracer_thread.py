@@ -31,7 +31,7 @@ class ProcessSTATTracerThread(BaseProcessTracerThread):
         stat = self._process.status()
         if stat is None:
             return
-        self.frontend_cache = stat
+        self.frontend_cache.stat = stat
         self._appender.append([
             self.get_timestamp(),
             stat
