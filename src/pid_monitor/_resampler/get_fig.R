@@ -1,6 +1,6 @@
 library(tidyverse)
 library(parallel)
-setwd("/home/yuzj/Desktop/profiler")
+setwd("/home/yuzj/Desktop/profiler2")
 
 cl <- parallel::makeForkCluster()
 
@@ -9,7 +9,7 @@ MAX_X_LABS <- 60
 get_plot <- function(soft) {
     message(sprintf("Plotting %s...", soft))
     d <- readr::read_csv(
-        sprintf("./%s_profile/final.csv", soft),
+        sprintf("%s/final.csv", soft),
         show_col_types = FALSE
     ) %>%
         dplyr::mutate(
@@ -38,12 +38,12 @@ get_plot <- function(soft) {
         labs(title = "Mean Memory Ultilization plot")
 
     ggsave(
-        sprintf("./%s_profile/final.png", soft),
+        sprintf("%s/final.png", soft),
         d_plot,
         width = 10,
         height = 8
     )
 }
 
-parSapply(cl = cl, X = c("flair", "freddie", "NanoAsPipe", "stringtie", "Tama", "unagi"), FUN = get_plot)
+parSapply(cl = cl, X = Sys.glob("/home/yuzj/Desktop/profiler2/FLAMES_*"), FUN = get_plot)
 

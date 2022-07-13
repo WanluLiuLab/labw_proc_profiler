@@ -242,25 +242,33 @@ def total_process(output_basename: str):
     )
     parallel_resample(output_basename, rsc, "*.mem.tsv.gz", keepfield=["VIRT", "DATA"])
     parallel_resample(output_basename, rsc, "*.cpu.tsv.gz", keepfield=["CPU_PERCENT"])
+    parallel_resample(output_basename, rsc, "*.nfd.tsv.gz", keepfield=["N_FD"])
+    parallel_resample(output_basename, rsc, "*.io.tsv.gz", keepfield=["DiskRead", "DiskWrite"])
     full_df_mem = aggregate_using_sum(output_basename, "*.mem.resampled.parquet")
     full_df_cpu = aggregate_using_sum(output_basename, "*.cpu.resampled.parquet")
-    full_df = full_df_mem.join(full_df_cpu, on="TIME", lsuffix="_L", rsuffix="_R")
+    full_df_nfd = aggregate_using_sum(output_basename, "*.nfd.resampled.parquet")
+    full_df_io = aggregate_using_sum(output_basename, "*.io.resampled.parquet")
+
+    full_df=full_df_mem
+
+    full_df = full_df.join(full_df_cpu, on="TIME", lsuffix="_L", rsuffix="_R")
     full_df["NPROC"] = full_df[[f"NPROC_L", f"NPROC_R"]].max(axis=1)
     full_df = full_df.drop([f"NPROC_R", f"NPROC_L"], axis=1)
+
+    full_df = full_df.join(full_df_nfd, on="TIME", lsuffix="_L", rsuffix="_R")
+    full_df["NPROC"] = full_df[[f"NPROC_L", f"NPROC_R"]].max(axis=1)
+    full_df = full_df.drop([f"NPROC_R", f"NPROC_L"], axis=1)
+
+    full_df = full_df.join(full_df_io, on="TIME", lsuffix="_L", rsuffix="_R")
+    full_df["NPROC"] = full_df[[f"NPROC_L", f"NPROC_R"]].max(axis=1)
+    full_df = full_df.drop([f"NPROC_R", f"NPROC_L"], axis=1)
+
     full_df.to_csv(os.path.join(output_basename, "final.csv"))
 
 
 if __name__ == '__main__':
     pool = parallel_helper.ParallelJobQueue()
-    for output_basename in (
-            '/home/yuzj/Documents/gpmf/opt/proc_profiler/src/pid_monitor/_test/proc_profiler_dd_xz_test',
-            # '/home/yuzj/Desktop/profiler/flair_profile/',
-            # '/home/yuzj/Desktop/profiler/freddie_profile/',
-            # '/home/yuzj/Desktop/profiler/NanoAsPipe_profile/',
-            # '/home/yuzj/Desktop/profiler/stringtie_profile/',
-            # '/home/yuzj/Desktop/profiler/Tama_profile/',
-            # '/home/yuzj/Desktop/profiler/unagi_profile/'
-    ):
+    for output_basename in glob.glob("/home/yuzj/Desktop/profiler2/FLAMES_*"):
         pool.append(multiprocessing.Process(target=total_process, kwargs={"output_basename": output_basename}))
     pool.start()
     pool.join()
