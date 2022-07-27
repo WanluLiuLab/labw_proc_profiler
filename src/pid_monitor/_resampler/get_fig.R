@@ -1,15 +1,17 @@
 library(tidyverse)
 library(parallel)
+library(patchwork)
+
 setwd("/home/yuzj/Desktop/profiler2")
 
 cl <- parallel::makeForkCluster()
 
-MAX_X_LABS <- 60
+get_supplementary_plot <- function(dirname) {
+    MAX_X_LABS <- 60
+    message(sprintf("Plotting %s...", dirname))
 
-get_plot <- function(soft) {
-    message(sprintf("Plotting %s...", soft))
     d <- readr::read_csv(
-        sprintf("%s/final.csv", soft),
+        sprintf("%s/final.csv", dirname),
         show_col_types = FALSE
     ) %>%
         dplyr::mutate(
@@ -30,12 +32,13 @@ get_plot <- function(soft) {
         ) +
         theme(axis.text.x = element_text(angle = 90)) +
         scale_y_continuous(
-            "Memory Allocated",
+            "Metrics Value",
             breaks = scales::breaks_extended(n = 5),
-            labels = scales::label_bytes(units = "auto_binary", accuracy = 0.01),
+            labels = scales::label_number(),
             limits = c(0, NA)
         ) +
-        labs(title = "Mean Memory Ultilization plot")
+        scale_color_discrete(name = "Metrics Type") +
+        labs(title = "Metrics Values")
 
     ggsave(
         sprintf("%s/final.png", soft),
@@ -43,7 +46,96 @@ get_plot <- function(soft) {
         width = 10,
         height = 8
     )
+    return(d_plot)
 }
 
-parSapply(cl = cl, X = Sys.glob("/home/yuzj/Desktop/profiler2/FLAMES_*"), FUN = get_plot)
+# get_plot("flair_20")
 
+
+get_required_data <- function(dirname) {
+    # CPU time
+    # Peak virt data
+    message(sprintf("Getting required %s...", dirname))
+
+    d <- readr::read_csv(
+        sprintf("%s/final.csv", dirname),
+        show_col_types = FALSE
+    )
+
+    peak_virt <- max(d$VIRT)
+    peak_data <- max(d$DATA)
+    mean_virt <- mean(d$VIRT)
+    mean_data <- mean(d$DATA)
+    cpu_time <- max(d$TIME) - mean(d$TIME)
+    cpu_time <- 0.0
+    for (cpu_time_filename in  Sys.glob(sprintf("%s/*.cputime", dirname))) {
+        con <- file(cpu_time_filename, "r")
+        cpu_time <- cpu_time + as.numeric(readLines(con, n = 1))
+        close(con)
+    }
+    return(c(cpu_time, peak_data, peak_virt, mean_data, mean_virt))
+}
+
+
+flist <- c()
+
+plot_table <- tibble::tibble(
+    SOFT = c(),
+    DATA_SIZE = c(),
+    CPU_TIME = c(),
+    PEAK_DATA = c(),
+    PEAK_VIRT = c()
+)
+for (software in c("flair", "FLAMES", "freddie", "NanoAsPipe", "stringtie", "unagi")) {
+
+    for (depth in seq(20, 100, 20)) {
+        dirname <- paste(software, depth, sep = "_")
+        flist <- c(flist, dirname)
+
+        this_required_data <- get_required_data(dirname)
+        plot_table <- dplyr::bind_rows(
+            plot_table,
+            tibble::tibble(
+                SOFT = software,
+                DATA_SIZE = depth,
+                CPU_TIME = c(this_required_data[1]),
+                PEAK_DATA = c(this_required_data[2]),
+                PEAK_VIRT = c(this_required_data[3]),
+                MEAN_DATA = c(this_required_data[4]),
+                MEAN_VIRT = c(this_required_data[5])
+            )
+        )
+    }
+}
+
+plot_table_wide <- plot_table %>%
+    dplyr::select(!(CPU_TIME)) %>%
+    tidyr::gather(key = "MEM_TYPE", value = "V", -SOFT, -DATA_SIZE)
+
+ggplot(plot_table_wide, aes(x = DATA_SIZE, y = V)) +
+    geom_bar(
+        aes(fill = SOFT),
+        stat = "identity",
+        position = "dodge"
+    ) +
+    theme_bw() +
+    scale_y_continuous(
+        "Metrics Value",
+        breaks = scales::breaks_extended(n = 10),
+        labels = scales::label_bytes(accuracy = 0.1)
+    ) +
+    scale_fill_discrete(name = "Software Name") +
+    facet_wrap(. ~ MEM_TYPE, scales = "free_y")
+
+ggplot(plot_table, aes(x = DATA_SIZE, y = CPU_TIME)) +
+    geom_line(aes(color = SOFT)) +
+    theme_bw() +
+    scale_y_continuous(
+        "Metrics Value",
+        breaks = scales::breaks_extended(n = 10),
+        labels = scales::label_number()
+    ) +
+    scale_color_discrete(name = "Software Name")
+
+
+# parSapply(cl = cl, X = flist, FUN = get_supplementary_plot)

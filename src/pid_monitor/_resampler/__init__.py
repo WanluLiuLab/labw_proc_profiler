@@ -71,7 +71,7 @@ class ResamplerConfig:
         self.time_start = pd.Timestamp(round(time_start, round_to_demical), unit="s")
         self.time_end = pd.Timestamp(round(time_end, round_to_demical), unit="s")
         self.index = pd.date_range(
-            start=self.time_start,
+            start=self.time_start - 2 * self.interval,
             end=self.time_end + 2 * self.interval,
             freq=self.interval
         )
@@ -145,6 +145,7 @@ class BaseResampler:
         if df.shape[0] == 0:
             df = df.set_index('TIME').reindex(self.rsc.index, method="bfill").reset_index(drop=False)
         else:
+            df = df.sort_values(by=['TIME'])
             df_time_start = df['TIME'][0]
             df_time_end = df['TIME'].iloc[-1]
 
@@ -162,7 +163,7 @@ class BaseResampler:
                 .reindex(self.rsc.index)
                 .reset_index(drop=False)
             )
-        df['TIME'] = (df['index'] - pd.Timestamp("1970-01-01")) / pd.Timedelta("1s")  # .apply(lambda x: x.timestamp())
+        df['TIME'] = (df['index'] - pd.Timestamp("1970-01-01")) / pd.Timedelta("1s")
         df = df.drop('index', axis=1)
         # print(dict(df.dtypes))
         # print(df.head(2))
@@ -267,11 +268,47 @@ def total_process(output_basename: str):
 
 
 if __name__ == '__main__':
-    pool = parallel_helper.ParallelJobQueue()
-    for output_basename in glob.glob("/home/yuzj/Desktop/profiler2/FLAMES_*"):
-        pool.append(multiprocessing.Process(target=total_process, kwargs={"output_basename": output_basename}))
-    pool.start()
-    pool.join()
+
+    flist = [
+    # "/home/yuzj/Desktop/profiler2/flair_20",
+    #     "/home/yuzj/Desktop/profiler2/flair_40",
+    #     "/home/yuzj/Desktop/profiler2/flair_60",
+    #     "/home/yuzj/Desktop/profiler2/flair_80",
+    #     "/home/yuzj/Desktop/profiler2/flair_100",
+    #    "/home/yuzj/Desktop/profiler2/FLAMES_20",
+    #     "/home/yuzj/Desktop/profiler2/FLAMES_40",
+    #     "/home/yuzj/Desktop/profiler2/FLAMES_60",
+    #     "/home/yuzj/Desktop/profiler2/FLAMES_80",
+    #     "/home/yuzj/Desktop/profiler2/FLAMES_100",
+        "/home/yuzj/Desktop/profiler2/freddie_20",
+        "/home/yuzj/Desktop/profiler2/freddie_40",
+        "/home/yuzj/Desktop/profiler2/freddie_60",
+       "/home/yuzj/Desktop/profiler2/freddie_80",
+       "/home/yuzj/Desktop/profiler2/freddie_100",
+        "/home/yuzj/Desktop/profiler2/NanoAsPipe_20",
+        "/home/yuzj/Desktop/profiler2/NanoAsPipe_40",
+         "/home/yuzj/Desktop/profiler2/NanoAsPipe_60",
+         "/home/yuzj/Desktop/profiler2/NanoAsPipe_80",
+         "/home/yuzj/Desktop/profiler2/NanoAsPipe_100",
+        "/home/yuzj/Desktop/profiler2/stringtie_20",
+        "/home/yuzj/Desktop/profiler2/stringtie_40",
+        "/home/yuzj/Desktop/profiler2/stringtie_60",
+        "/home/yuzj/Desktop/profiler2/stringtie_80",
+        "/home/yuzj/Desktop/profiler2/stringtie_100",
+        "/home/yuzj/Desktop/profiler2/unagi_20",
+        "/home/yuzj/Desktop/profiler2/unagi_40",
+        "/home/yuzj/Desktop/profiler2/unagi_60",
+        "/home/yuzj/Desktop/profiler2/unagi_80",
+        "/home/yuzj/Desktop/profiler2/unagi_100"
+    ]
+
+    # pool = parallel_helper.ParallelJobQueue()
+    for output_basename in flist:
+        print(output_basename)
+        total_process(output_basename)
+    #     pool.append(multiprocessing.Process(target=total_process, kwargs={"output_basename": output_basename}))
+    # pool.start()
+    # pool.join()
     # print(full_df.head())
     # sns.lineplot(data=full_df).get_figure().savefig(os.path.join(output_basename, "final_aggregated_mem.png"))
     # print(os.path.join(output_basename, "final_aggregated_mem.png"))
