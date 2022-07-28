@@ -41,7 +41,7 @@ get_supplementary_plot <- function(dirname) {
         labs(title = "Metrics Values")
 
     ggsave(
-        sprintf("%s/final.png", soft),
+        sprintf("%s/final.png", dirname),
         d_plot,
         width = 10,
         height = 8
@@ -77,65 +77,98 @@ get_required_data <- function(dirname) {
 }
 
 
-flist <- c()
+flist <- c("proc_profiler_sh_f9132cfd-50f5-47e1-af82-41cf17a8e069")
 
-plot_table <- tibble::tibble(
-    SOFT = c(),
-    DATA_SIZE = c(),
-    CPU_TIME = c(),
-    PEAK_DATA = c(),
-    PEAK_VIRT = c()
-)
-for (software in c("flair", "FLAMES", "freddie", "NanoAsPipe", "stringtie", "unagi")) {
+# plot_table <- tibble::tibble(
+#     SOFT = c(),
+#     DATA_SIZE = c(),
+#     CPU_TIME = c(),
+#     PEAK_DATA = c(),
+#     PEAK_VIRT = c()
+# )
+# for (software in c("flair", "FLAMES", "freddie", "NanoAsPipe", "stringtie", "unagi")) {
+#
+#     for (depth in seq(20, 100, 20)) {
+#         dirname <- paste(software, depth, sep = "_")
+#         flist <- c(flist, dirname)
+#
+#         this_required_data <- get_required_data(dirname)
+#         plot_table <- dplyr::bind_rows(
+#             plot_table,
+#             tibble::tibble(
+#                 SOFT = software,
+#                 DATA_SIZE = depth,
+#                 CPU_TIME = c(this_required_data[1]),
+#                 PEAK_DATA = c(this_required_data[2]),
+#                 PEAK_VIRT = c(this_required_data[3]),
+#                 MEAN_DATA = c(this_required_data[4]),
+#                 MEAN_VIRT = c(this_required_data[5])
+#             )
+#         )
+#     }
+# }
+#
+# plot_table_wide <- plot_table %>%
+#     dplyr::select(!(CPU_TIME)) %>%
+#     tidyr::gather(key = "MEM_TYPE", value = "V", -SOFT, -DATA_SIZE)
+#
+# ggplot(plot_table_wide, aes(x = DATA_SIZE, y = V)) +
+#     geom_bar(
+#         aes(fill = SOFT),
+#         stat = "identity",
+#         position = "dodge"
+#     ) +
+#     theme_bw() +
+#     scale_y_continuous(
+#         "Memory Consumption",
+#         breaks = scales::breaks_extended(n = 10),
+#         labels = scales::label_bytes(accuracy = 0.1)
+#     ) +
+#     scale_fill_discrete(name = "Software Name") +
+#     facet_wrap(. ~ MEM_TYPE, scales = "free_y")
+#
+# ggplot(plot_table, aes(x = DATA_SIZE, y = CPU_TIME)) +
+#     geom_line(aes(color = SOFT)) +
+#     theme_bw() +
+#     scale_y_continuous(
+#         "CPU Time",
+#         breaks = scales::breaks_extended(n = 10),
+#         labels = scales::label_number()
+#     ) +
+#     scale_color_discrete(name = "Software Name")
+#
+# ggplot(plot_table, aes(x = CPU_TIME, y = MEAN_VIRT)) +
+#     geom_point(aes(color = SOFT)) +
+#     theme_bw() +
+#     scale_x_continuous(
+#         "CPU Time",
+#         breaks = scales::breaks_extended(n = 10),
+#         labels = scales::label_number(),
+#         trans="log"
+#     ) +
+#     scale_y_continuous(
+#         "Mean Virtual Memory Consumption",
+#         breaks = scales::breaks_extended(n = 10),
+#         labels = scales::label_bytes(accuracy = 0.1),
+#         trans="log"
+#     ) +
+#     scale_color_discrete(name = "Software Name")
+#
+# ggplot(plot_table, aes(x = CPU_TIME, y = PEAK_VIRT)) +
+#     geom_point(aes(color = SOFT)) +
+#     theme_bw() +
+#     scale_x_continuous(
+#         "CPU Time",
+#         breaks = scales::breaks_extended(n = 10),
+#         labels = scales::label_number(),
+#         trans="log"
+#     ) +
+#     scale_y_continuous(
+#         "Peak Virtual Memory Consumption",
+#         breaks = scales::breaks_extended(n = 10),
+#         labels = scales::label_bytes(accuracy = 0.1),
+#         trans="log"
+#     ) +
+#     scale_color_discrete(name = "Software Name")
 
-    for (depth in seq(20, 100, 20)) {
-        dirname <- paste(software, depth, sep = "_")
-        flist <- c(flist, dirname)
-
-        this_required_data <- get_required_data(dirname)
-        plot_table <- dplyr::bind_rows(
-            plot_table,
-            tibble::tibble(
-                SOFT = software,
-                DATA_SIZE = depth,
-                CPU_TIME = c(this_required_data[1]),
-                PEAK_DATA = c(this_required_data[2]),
-                PEAK_VIRT = c(this_required_data[3]),
-                MEAN_DATA = c(this_required_data[4]),
-                MEAN_VIRT = c(this_required_data[5])
-            )
-        )
-    }
-}
-
-plot_table_wide <- plot_table %>%
-    dplyr::select(!(CPU_TIME)) %>%
-    tidyr::gather(key = "MEM_TYPE", value = "V", -SOFT, -DATA_SIZE)
-
-ggplot(plot_table_wide, aes(x = DATA_SIZE, y = V)) +
-    geom_bar(
-        aes(fill = SOFT),
-        stat = "identity",
-        position = "dodge"
-    ) +
-    theme_bw() +
-    scale_y_continuous(
-        "Metrics Value",
-        breaks = scales::breaks_extended(n = 10),
-        labels = scales::label_bytes(accuracy = 0.1)
-    ) +
-    scale_fill_discrete(name = "Software Name") +
-    facet_wrap(. ~ MEM_TYPE, scales = "free_y")
-
-ggplot(plot_table, aes(x = DATA_SIZE, y = CPU_TIME)) +
-    geom_line(aes(color = SOFT)) +
-    theme_bw() +
-    scale_y_continuous(
-        "Metrics Value",
-        breaks = scales::breaks_extended(n = 10),
-        labels = scales::label_number()
-    ) +
-    scale_color_discrete(name = "Software Name")
-
-
-# parSapply(cl = cl, X = flist, FUN = get_supplementary_plot)
+parSapply(cl = cl, X = flist, FUN = get_supplementary_plot)
