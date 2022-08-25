@@ -9,10 +9,12 @@ import multiprocessing
 import os
 import queue
 import re
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Dict
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import tqdm
+import seaborn as sns
 
 from pid_monitor._lib import parallel_helper
 
@@ -176,6 +178,7 @@ def aggregate_using_sum(output_basename: str, file_mask: str):
     files_needed_to_be_parsed = list(glob.glob(os.path.join(output_basename, file_mask)))
     full_df = None
     full_df_names = []
+
     for path in tqdm.tqdm(files_needed_to_be_parsed, desc="Aggregating..."):
         df = pd.read_parquet(path).set_index("TIME").fillna(value=0)
         # print(df.head(2))
@@ -196,6 +199,25 @@ def aggregate_using_sum(output_basename: str, file_mask: str):
                 full_df = full_df.drop([f"{name}_R", f"{name}_L"], axis=1)
                 # print(full_df.dtypes.keys())
     return full_df
+
+
+def plot_aggregation_figure(output_basename: str, file_mask: str, col_name: str, out_filename: str):
+    files_needed_to_be_parsed = list(glob.glob(os.path.join(output_basename, file_mask)))
+    agg_data: Dict[str, List[float]] = {}
+    dfl = 0
+    for path in tqdm.tqdm(files_needed_to_be_parsed, desc="Aggregating..."):
+        df = pd.read_parquet(path).set_index("TIME").fillna(value=0)
+        agg_data[os.path.basename(path)] = df[col_name].array
+        if dfl == 0:
+            dfl = len(agg_data[os.path.basename(path)])
+    agg_data_df = pd.DataFrame(agg_data)
+    agg_data_df.to_csv(os.path.join(output_basename, out_filename) + ".csv")
+    plt.figure(figsize=(20, 10))
+    plt.stackplot(range(dfl), *agg_data.values())
+    plt.legend(agg_data.keys())
+    plt.savefig(os.path.join(output_basename, out_filename) + ".png")
+    plt.cla()
+
 
 
 def parallel_resample(
@@ -245,12 +267,16 @@ def total_process(output_basename: str):
     parallel_resample(output_basename, rsc, "*.cpu.tsv.gz", keepfield=["CPU_PERCENT"])
     parallel_resample(output_basename, rsc, "*.nfd.tsv.gz", keepfield=["N_FD"])
     parallel_resample(output_basename, rsc, "*.io.tsv.gz", keepfield=["DiskRead", "DiskWrite"])
+
     full_df_mem = aggregate_using_sum(output_basename, "*.mem.resampled.parquet")
     full_df_cpu = aggregate_using_sum(output_basename, "*.cpu.resampled.parquet")
     full_df_nfd = aggregate_using_sum(output_basename, "*.nfd.resampled.parquet")
     full_df_io = aggregate_using_sum(output_basename, "*.io.resampled.parquet")
 
-    full_df=full_df_mem
+    plot_aggregation_figure(output_basename, "*.mem.resampled.parquet", "DATA", "final.mem")
+    plot_aggregation_figure(output_basename, "*.cpu.resampled.parquet", "CPU_PERCENT", "final.cpu")
+
+    full_df = full_df_mem
 
     full_df = full_df.join(full_df_cpu, on="TIME", lsuffix="_L", rsuffix="_R")
     full_df["NPROC"] = full_df[[f"NPROC_L", f"NPROC_R"]].max(axis=1)
@@ -270,37 +296,37 @@ def total_process(output_basename: str):
 if __name__ == '__main__':
 
     flist = [
-    # "/home/yuzj/Desktop/profiler2/flair_20",
-    #     "/home/yuzj/Desktop/profiler2/flair_40",
-    #     "/home/yuzj/Desktop/profiler2/flair_60",
-    #     "/home/yuzj/Desktop/profiler2/flair_80",
-    #     "/home/yuzj/Desktop/profiler2/flair_100",
-    #    "/home/yuzj/Desktop/profiler2/FLAMES_20",
-    #     "/home/yuzj/Desktop/profiler2/FLAMES_40",
-    #     "/home/yuzj/Desktop/profiler2/FLAMES_60",
-    #     "/home/yuzj/Desktop/profiler2/FLAMES_80",
-    #     "/home/yuzj/Desktop/profiler2/FLAMES_100",
-    #     "/home/yuzj/Desktop/profiler2/freddie_20",
-    #     "/home/yuzj/Desktop/profiler2/freddie_40",
-    #     "/home/yuzj/Desktop/profiler2/freddie_60",
-    #    "/home/yuzj/Desktop/profiler2/freddie_80",
-    #    "/home/yuzj/Desktop/profiler2/freddie_100",
-    #     "/home/yuzj/Desktop/profiler2/NanoAsPipe_20",
-    #     "/home/yuzj/Desktop/profiler2/NanoAsPipe_40",
-    #      "/home/yuzj/Desktop/profiler2/NanoAsPipe_60",
-    #      "/home/yuzj/Desktop/profiler2/NanoAsPipe_80",
-    #      "/home/yuzj/Desktop/profiler2/NanoAsPipe_100",
-    #     "/home/yuzj/Desktop/profiler2/stringtie_20",
-    #     "/home/yuzj/Desktop/profiler2/stringtie_40",
-    #     "/home/yuzj/Desktop/profiler2/stringtie_60",
-    #     "/home/yuzj/Desktop/profiler2/stringtie_80",
-    #     "/home/yuzj/Desktop/profiler2/stringtie_100",
-    #     "/home/yuzj/Desktop/profiler2/unagi_20",
-    #     "/home/yuzj/Desktop/profiler2/unagi_40",
-    #     "/home/yuzj/Desktop/profiler2/unagi_60",
-    #     "/home/yuzj/Desktop/profiler2/unagi_80",
-    #     "/home/yuzj/Desktop/profiler2/unagi_100"
-        '/home/yuzj/Desktop/profiler2/proc_profiler_sh_f9132cfd-50f5-47e1-af82-41cf17a8e069'
+        # "/home/yuzj/Desktop/profiler2/flair_20",
+        #     "/home/yuzj/Desktop/profiler2/flair_40",
+        #     "/home/yuzj/Desktop/profiler2/flair_60",
+        #     "/home/yuzj/Desktop/profiler2/flair_80",
+        #     "/home/yuzj/Desktop/profiler2/flair_100",
+        # "/home/yuzj/Desktop/profiler2/FLAMES_20",
+        #     "/home/yuzj/Desktop/profiler2/FLAMES_40",
+        #     "/home/yuzj/Desktop/profiler2/FLAMES_60",
+        #     "/home/yuzj/Desktop/profiler2/FLAMES_80",
+        #     "/home/yuzj/Desktop/profiler2/FLAMES_100",
+             "/home/yuzj/Desktop/profiler2/freddie_20",
+        #     "/home/yuzj/Desktop/profiler2/freddie_40",
+        #     "/home/yuzj/Desktop/profiler2/freddie_60",
+        #    "/home/yuzj/Desktop/profiler2/freddie_80",
+        #    "/home/yuzj/Desktop/profiler2/freddie_100",
+        #     "/home/yuzj/Desktop/profiler2/NanoAsPipe_20",
+        #     "/home/yuzj/Desktop/profiler2/NanoAsPipe_40",
+        #      "/home/yuzj/Desktop/profiler2/NanoAsPipe_60",
+        #      "/home/yuzj/Desktop/profiler2/NanoAsPipe_80",
+        #      "/home/yuzj/Desktop/profiler2/NanoAsPipe_100",
+        #     "/home/yuzj/Desktop/profiler2/stringtie_20",
+        #     "/home/yuzj/Desktop/profiler2/stringtie_40",
+        #     "/home/yuzj/Desktop/profiler2/stringtie_60",
+        #     "/home/yuzj/Desktop/profiler2/stringtie_80",
+        #     "/home/yuzj/Desktop/profiler2/stringtie_100",
+        #     "/home/yuzj/Desktop/profiler2/unagi_20",
+        #     "/home/yuzj/Desktop/profiler2/unagi_40",
+        #     "/home/yuzj/Desktop/profiler2/unagi_60",
+        #     "/home/yuzj/Desktop/profiler2/unagi_80",
+        #     "/home/yuzj/Desktop/profiler2/unagi_100"
+        # '/home/yuzj/Desktop/profiler2/proc_profiler_sh_f9132cfd-50f5-47e1-af82-41cf17a8e069'
     ]
 
     # pool = parallel_helper.ParallelJobQueue()
