@@ -14,3 +14,4 @@ fastparquet~=0.8.1
 tables~=3.7
 setuptools
 scipy~=1.9
+joblib

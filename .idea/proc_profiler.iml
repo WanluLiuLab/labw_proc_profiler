@@ -30,6 +30,8 @@
       <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_calibrate_cpu" />
       <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_calibrate_mem" />
       <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_calibrate_cputime_test" />
+      <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_calibrate_disk_test" />
+      <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_calibrate_fork_speed_test" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
