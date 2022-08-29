@@ -22,6 +22,9 @@ from pid_monitor._dt_mvc.pm_config import PMConfig
 from pid_monitor._dt_mvc.typing import ThreadWithPMC
 
 
+class ProbeError(ValueError):
+    pass
+
 class BaseTracerThread(ThreadWithPMC):
     """
     The base class of all tracers.
@@ -35,22 +38,25 @@ class BaseTracerThread(ThreadWithPMC):
     def _init_setup_hook(
             self,
             tracer_type: str,
-            table_appender_header: List[str]
+            table_appender_header: Optional[List[str]]
     ):
         self.tracer_type = tracer_type
-        if self.trace_pid == DEFAULT_SYSTEM_INDICATOR_PID:
-            filename = f"{self.pmc.output_basename}.sys.{self.tracer_type}"
+        if table_appender_header is None:
+            self._appender = None
         else:
-            filename = f"{self.pmc.output_basename}.{self.trace_pid}.{self.tracer_type}"
-        self._appender = load_table_appender_class(
-            self.pmc.table_appender_type
-        )(
-            filename=filename,
-            header=table_appender_header,
-            tac=TableAppenderConfig(
-                self.pmc.table_appender_buffer_size
+            if self.trace_pid == DEFAULT_SYSTEM_INDICATOR_PID:
+                filename = f"{self.pmc.output_basename}.sys.{self.tracer_type}"
+            else:
+                filename = f"{self.pmc.output_basename}.{self.trace_pid}.{self.tracer_type}"
+            self._appender = load_table_appender_class(
+                self.pmc.table_appender_type
+            )(
+                filename=filename,
+                header=table_appender_header,
+                tac=TableAppenderConfig(
+                    self.pmc.table_appender_buffer_size
+                )
             )
-        )
         self.log_handler.debug(f"Tracer for TRACE_PID={self.trace_pid} TYPE={self.tracer_type} added")
         self._post_inithook_hook()
 
@@ -74,14 +80,24 @@ class BaseTracerThread(ThreadWithPMC):
     def run_body(self):
         while not self.should_exit:
             try:
+                self.log_handler.debug(f"Tracer for TRACE_PID={self.trace_pid} TYPE={self.tracer_type} PROBE")
                 self.probe()
+                self.log_handler.debug(f"Tracer for TRACE_PID={self.trace_pid} TYPE={self.tracer_type} PROBE FIN")
+            except ProbeError as e:
+                self.log_handler.error(
+                    f"TRACE_PID={self.trace_pid} TYPE={self.tracer_type}: ProbeError {e.__class__.__name__} encountered!"
+                )
+                return
             except PSUTIL_NOTFOUND_ERRORS as e:
                 self.log_handler.error(
-                    f"TRACE_PID={self.trace_pid} TYPE={self.tracer_type}: {e.__class__.__name__} encountered!"
+                    f"TRACE_PID={self.trace_pid} TYPE={self.tracer_type}: PSUtilError {e.__class__.__name__} encountered!"
                 )
                 return
             sleep(self.pmc.backend_refresh_interval)
-        self._appender.close()
+        try:
+            self._appender.close()
+        except AttributeError:
+            pass
 
     @abstractmethod
     def probe(self):

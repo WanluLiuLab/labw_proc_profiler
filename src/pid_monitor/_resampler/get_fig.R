@@ -2,7 +2,7 @@ library(tidyverse)
 library(parallel)
 library(patchwork)
 
-setwd("/home/yuzj/Desktop/profiler2")
+setwd("/home/yuzj/Documents/gpmf/opt/proc_profiler/src/pid_monitor/_test")
 
 cl <- parallel::makeForkCluster()
 
@@ -77,7 +77,7 @@ get_required_data <- function(dirname) {
 }
 
 
-flist <- c("proc_profiler_sh_f9132cfd-50f5-47e1-af82-41cf17a8e069")
+flist <- c("proc_profiler_calibrate_cpu", "proc_profiler_calibrate_mem")
 
 # plot_table <- tibble::tibble(
 #     SOFT = c(),
@@ -172,3 +172,5 @@ flist <- c("proc_profiler_sh_f9132cfd-50f5-47e1-af82-41cf17a8e069")
 #     scale_color_discrete(name = "Software Name")
 
 parSapply(cl = cl, X = flist, FUN = get_supplementary_plot)
+
+ggplot(r, aes(x=TIME)) + geom_line(aes(y=VIRT), color="blue") + geom_line(aes(y=RESIDENT), color="red") + geom_line(aes(y=SHARED), color="black") + geom_line(aes(y=TEXT), color="green") + geom_line(aes(y=DATA), color="purple")

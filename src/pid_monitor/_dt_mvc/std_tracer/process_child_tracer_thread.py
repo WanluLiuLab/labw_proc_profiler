@@ -32,7 +32,7 @@ class ProcessChildTracerThread(BaseProcessTracerThread):
 
     def probe(self):
         self.frontend_cache.num_child_processes = len(self._process.children())
-        self.frontend_cache.num_threads = self._process.num_threads()
+        self.frontend_cache.num_threads = len(self._process.threads())
         self._appender.append([
             self.get_timestamp(),
             self.frontend_cache.num_child_processes,

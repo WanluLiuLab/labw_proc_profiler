@@ -1,6 +1,6 @@
 from pid_monitor._dt_mvc.frontend_cache.process_frontend_cache import ProcessFrontendCache
 from pid_monitor._dt_mvc.pm_config import PMConfig
-from pid_monitor._dt_mvc.std_tracer import BaseProcessTracerThread
+from pid_monitor._dt_mvc.std_tracer import BaseProcessTracerThread, ProbeError
 
 __all__ = ("ProcessSTATTracerThread",)
 
@@ -30,7 +30,7 @@ class ProcessSTATTracerThread(BaseProcessTracerThread):
     def probe(self):
         stat = self._process.status()
         if stat is None:
-            return
+            raise ProbeError(f"TRACEE={self.trace_pid}: STAT returns None!")
         self.frontend_cache.stat = stat
         self._appender.append([
             self.get_timestamp(),

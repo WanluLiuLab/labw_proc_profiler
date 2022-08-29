@@ -1,6 +1,6 @@
 from pid_monitor._dt_mvc.frontend_cache.process_frontend_cache import ProcessFrontendCache
 from pid_monitor._dt_mvc.pm_config import PMConfig
-from pid_monitor._dt_mvc.std_tracer import BaseProcessTracerThread
+from pid_monitor._dt_mvc.std_tracer import BaseProcessTracerThread, ProbeError
 
 __all__ = ("ProcessMEMTracerThread",)
 
@@ -38,7 +38,7 @@ class ProcessMEMTracerThread(BaseProcessTracerThread):
     def probe(self):
         x = self._process.memory_full_info()
         if x is None:
-            return
+            raise ProbeError(f"TRACEE={self.trace_pid}: MEM returns None!")
         self.frontend_cache.resident_mem = x.rss
         self._appender.append([
             self.get_timestamp(),

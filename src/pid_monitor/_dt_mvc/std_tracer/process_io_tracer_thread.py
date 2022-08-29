@@ -1,6 +1,6 @@
 from pid_monitor._dt_mvc.frontend_cache.process_frontend_cache import ProcessFrontendCache
 from pid_monitor._dt_mvc.pm_config import PMConfig
-from pid_monitor._dt_mvc.std_tracer import BaseProcessTracerThread
+from pid_monitor._dt_mvc.std_tracer import BaseProcessTracerThread, ProbeError
 
 __all__ = ("ProcessIOTracerThread",)
 
@@ -35,7 +35,7 @@ class ProcessIOTracerThread(BaseProcessTracerThread):
     def probe(self):
         io_info = self._process.io_counters()
         if io_info is None:
-            return
+            raise ProbeError(f"TRACEE={self.trace_pid}: IO returns None!")
         curr_dr = io_info.read_bytes
         curr_dw = io_info.write_bytes
         curr_tr = io_info.read_chars

@@ -30,5 +30,6 @@ import logging
 logging.basicConfig(
     level=logging.DEBUG,
     filename="tracer.log",
+    filemode="w",
     format='%(asctime)s %(filename)s:%(lineno)s %(levelname)s: %(message)s'
 )

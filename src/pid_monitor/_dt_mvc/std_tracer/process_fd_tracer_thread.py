@@ -4,7 +4,7 @@ from typing import Iterable, Tuple
 
 from pid_monitor._dt_mvc.frontend_cache.process_frontend_cache import ProcessFrontendCache
 from pid_monitor._dt_mvc.pm_config import PMConfig
-from pid_monitor._dt_mvc.std_tracer import BaseProcessTracerThread
+from pid_monitor._dt_mvc.std_tracer import BaseProcessTracerThread, ProbeError
 
 __all__ = ("ProcessFDTracerThread",)
 
@@ -56,5 +56,4 @@ class ProcessFDTracerThread(BaseProcessTracerThread):
                     path
                 ])
         except PermissionError:
-            self.log_handler.error(f"TRACEE={self.trace_pid}: PermissionError encountered!")
-            return
+            raise ProbeError(f"TRACEE={self.trace_pid}: PermissionError encountered!")

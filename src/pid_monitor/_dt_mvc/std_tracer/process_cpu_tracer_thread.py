@@ -33,8 +33,8 @@ class AsyncProcessCPUProbeThread(threading.Thread):
         self.frontend_cache.cpu_percent = cpu_percent
         self.appender.append([
             time.time(),  # FIXME: Replace with get_timestamp()
-            cpu_percent,
-            on_cpu
+            on_cpu,
+            cpu_percent
         ])
 
 

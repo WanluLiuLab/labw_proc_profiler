@@ -4,7 +4,7 @@ from typing import List
 
 from pid_monitor._dt_mvc.appender import AVAILABLE_TABLE_APPENDERS
 
-DEFAULT_BACKEND_REFRESH_INTERVAL = 0.01
+DEFAULT_BACKEND_REFRESH_INTERVAL = 0
 DEFAULT_FRONTEND_REFRESH_INTERVAL = 1
 DEFAULT_PROCESS_LEVEL_TRACERS = [
     "ProcessIOTracerThread",
@@ -13,7 +13,8 @@ DEFAULT_PROCESS_LEVEL_TRACERS = [
     "ProcessChildTracerThread",
     "ProcessCPUTracerThread",
     "ProcessSTATTracerThread",
-    "ProcessNFDTracerThread"
+    "ProcessNFDTracerThread",
+    "ProcessCPUTimeTracerThread"
 ]
 DEFAULT_SYSTEM_LEVEL_TRACERS = [
     "SystemMEMTracerThread",
@@ -35,7 +36,8 @@ POSSIBLE_TRACER_PATHS = (
     "pid_monitor._dt_mvc.std_tracer.system_mem_tracer_thread",
     "pid_monitor._dt_mvc.std_tracer.system_swap_tracer_thread",
     # "pid_monitor._dt_mvc.std_tracer.system_concurrent_tracer_thread",
-    "pid_monitor._dt_mvc.std_tracer.process_nfd_tracer_thread"
+    "pid_monitor._dt_mvc.std_tracer.process_nfd_tracer_thread",
+    "pid_monitor._dt_mvc.std_tracer.process_cputime_tracer_thread"
 )
 
 

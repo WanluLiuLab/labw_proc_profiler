@@ -26,6 +26,10 @@
       <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_test" />
       <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_dd_xz_test" />
       <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_fast_fork_test" />
+      <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_memtest_test" />
+      <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_calibrate_cpu" />
+      <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_calibrate_mem" />
+      <excludeFolder url="file://$MODULE_DIR$/src/pid_monitor/_test/proc_profiler_calibrate_cputime_test" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

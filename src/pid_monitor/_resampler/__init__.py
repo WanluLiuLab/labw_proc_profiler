@@ -263,17 +263,15 @@ def total_process(output_basename: str):
         round_to_demical=0,
         file_mask="*.tsv.gz"
     )
-    parallel_resample(output_basename, rsc, "*.mem.tsv.gz", keepfield=["VIRT", "DATA"])
+    parallel_resample(output_basename, rsc, "*.mem.tsv.gz", keepfield=["VIRT", "RESIDENT"])
     parallel_resample(output_basename, rsc, "*.cpu.tsv.gz", keepfield=["CPU_PERCENT"])
     parallel_resample(output_basename, rsc, "*.nfd.tsv.gz", keepfield=["N_FD"])
-    parallel_resample(output_basename, rsc, "*.io.tsv.gz", keepfield=["DiskRead", "DiskWrite"])
 
     full_df_mem = aggregate_using_sum(output_basename, "*.mem.resampled.parquet")
     full_df_cpu = aggregate_using_sum(output_basename, "*.cpu.resampled.parquet")
     full_df_nfd = aggregate_using_sum(output_basename, "*.nfd.resampled.parquet")
-    full_df_io = aggregate_using_sum(output_basename, "*.io.resampled.parquet")
 
-    plot_aggregation_figure(output_basename, "*.mem.resampled.parquet", "DATA", "final.mem")
+    plot_aggregation_figure(output_basename, "*.mem.resampled.parquet", "RESIDENT", "final.mem")
     plot_aggregation_figure(output_basename, "*.cpu.resampled.parquet", "CPU_PERCENT", "final.cpu")
 
     full_df = full_df_mem
@@ -286,16 +284,14 @@ def total_process(output_basename: str):
     full_df["NPROC"] = full_df[[f"NPROC_L", f"NPROC_R"]].max(axis=1)
     full_df = full_df.drop([f"NPROC_R", f"NPROC_L"], axis=1)
 
-    full_df = full_df.join(full_df_io, on="TIME", lsuffix="_L", rsuffix="_R")
-    full_df["NPROC"] = full_df[[f"NPROC_L", f"NPROC_R"]].max(axis=1)
-    full_df = full_df.drop([f"NPROC_R", f"NPROC_L"], axis=1)
-
     full_df.to_csv(os.path.join(output_basename, "final.csv"))
 
 
 if __name__ == '__main__':
 
     flist = [
+        "/home/yuzj/Documents/gpmf/opt/proc_profiler/src/pid_monitor/_test/proc_profiler_calibrate_cpu",
+        "/home/yuzj/Documents/gpmf/opt/proc_profiler/src/pid_monitor/_test/proc_profiler_calibrate_mem",
         # "/home/yuzj/Desktop/profiler2/flair_20",
         #     "/home/yuzj/Desktop/profiler2/flair_40",
         #     "/home/yuzj/Desktop/profiler2/flair_60",
@@ -306,7 +302,7 @@ if __name__ == '__main__':
         #     "/home/yuzj/Desktop/profiler2/FLAMES_60",
         #     "/home/yuzj/Desktop/profiler2/FLAMES_80",
         #     "/home/yuzj/Desktop/profiler2/FLAMES_100",
-             "/home/yuzj/Desktop/profiler2/freddie_20",
+         #    "/home/yuzj/Desktop/profiler2/freddie_20",
         #     "/home/yuzj/Desktop/profiler2/freddie_40",
         #     "/home/yuzj/Desktop/profiler2/freddie_60",
         #    "/home/yuzj/Desktop/profiler2/freddie_80",

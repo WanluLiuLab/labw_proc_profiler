@@ -20,18 +20,6 @@ _DISPATCHER_MUTEX = threading.Lock()
 """Mutex for creating dispatchers for new process/thread"""
 
 
-def get_total_cpu_time(_p: psutil.Process) -> float:
-    """
-    Get total CPU time for a process.
-    Should return time spent in system mode (aka. kernel mode) and user mode.
-    """
-    try:
-        cpu_time_tuple = _p.cpu_times()
-        return cpu_time_tuple.system + cpu_time_tuple.user
-    except PSUTIL_NOTFOUND_ERRORS:
-        return -1
-
-
 class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
     """
     The dispatcher, use to monitor whether a process have initiated a sub-process
@@ -43,7 +31,6 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
     def before_ending(self):
         pass
 
-    _cached_last_cpu_time: float
     _registry_appender: BaseTableAppender
     process: Optional[psutil.Process]
 
@@ -57,7 +44,7 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         """
         The constructor of the class will do following things:
 
-        - Detech whether this process exists. If not exists, will raise an error.
+        - Detect whether this process exists. If not exists, will raise an error.
         - Add PID to all recorded PIDS.
         - Write system-level registry.
         - Write initializing environment variables of this process.
@@ -72,14 +59,6 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         self.process = None
         self._registry_appender = registry_appender
 
-    def _update_last_cpu_time(self):
-        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: update CPUTIME")
-        self._cached_last_cpu_time = get_total_cpu_time(self.process)
-        self._frontend_cache.cpu_time = self._cached_last_cpu_time
-        with open(f"{self.pmc.output_basename}.{self.trace_pid}.cputime", mode='w') as writer:
-            writer.write(str(self._cached_last_cpu_time) + '\n')
-        self.log_handler.debug(f"DISPATCHEE={self.trace_pid}: update CPUTIMEV SUCCESS")
-
     def run_body(self):
         """
         The major running part of this function performs following things:
@@ -88,7 +67,6 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
         - Detect whether the process have forked sub-processes.
         - Detect whether the process have created new threads.
         """
-        self._cached_last_cpu_time = -1
         try:
             self.process = psutil.Process(self.trace_pid)
             name = self.process.name()
@@ -124,7 +102,6 @@ class ProcessTracerDispatcherThread(BaseTracerDispatcherThread):
             try:
                 with _DISPATCHER_MUTEX:
                     self._detect_process()
-                self._update_last_cpu_time()
             except PSUTIL_NOTFOUND_ERRORS:
                 break
             sleep(self.pmc.backend_refresh_interval)
